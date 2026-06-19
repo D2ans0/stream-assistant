@@ -1,0 +1,15 @@
+:root {
+  --highlight-color: #ff7900;
+}
+
+h2 {
+  margin: .25rem 0;
+  font-family: Aurebesh;
+  font-weight: bold;
+  text-align: center;
+  font-size: 2rem;
+}
+
+h2.AB212 {
+    color: #ff7900
+}

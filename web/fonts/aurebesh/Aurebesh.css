@@ -1,0 +1,52 @@
+@font-face {
+  font-family: "Aurebesh";
+  src: url('Aurebesh.woff2') format('woff2');
+  font-style: normal;
+  font-weight: normal;
+}
+@font-face {
+  font-family: "Aurebesh";
+  src: url('Aurebesh Bold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: bold;
+}
+@font-face {
+  font-family: "Aurebesh";
+  src: url('Aurebesh Italic.woff2') format('woff2');
+  font-style: italic;
+  font-weight: normal;
+}
+@font-face {
+  font-family: "Aurebesh";
+  src: url('Aurebesh Bold Italic.woff2') format('woff2');
+  font-style: italic;
+  font-weight: bold;
+}
+@font-face {
+  font-family: "Aurebesh";
+  src: url('Aurebesh Condensed.woff2') format('woff2');
+  font-style: normal;
+  font-weight: normal;
+  font-stretch: condensed;
+}
+@font-face {
+  font-family: "Aurebesh";
+  src: url('Aurebesh Condensed Bold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: bold;
+  font-stretch: condensed;
+}
+@font-face {
+  font-family: "Aurebesh";
+  src: url('Aurebesh Condensed Italic.woff2') format('woff2');
+  font-style: italic;
+  font-weight: normal;
+  font-stretch: condensed;
+}
+@font-face {
+  font-family: "Aurebesh";
+  src: url('Aurebesh Condensed Bold Italic.woff2') format('woff2');
+  font-style: italic;
+  font-weight: bold;
+  font-stretch: condensed;
+}

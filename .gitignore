@@ -1,0 +1,9 @@
+.env
+vendor/
+*.pem
+*.db
+config.json
+
+# Avoid redistributing fonts, but keep the css font-face definitions
+web/fonts/*/*.woff2
+web/fonts/*/*.txt
