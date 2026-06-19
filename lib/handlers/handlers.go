@@ -3,7 +3,6 @@ package handlers
 import (
 	tw "SA/lib/twitch"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -15,7 +14,6 @@ var (
 func Root(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	w.Header().Add("Content-Type", "text/html")
-	log.Println("Incoming request to " + r.RequestURI)
 	fmt.Fprintf(w, `
 			<body>
 			<form action="/getChannelID" method="post" id="channelNameForm">
@@ -29,7 +27,6 @@ func Root(w http.ResponseWriter, r *http.Request) {
 
 func GetChannelIDByName(w http.ResponseWriter, r *http.Request) {
 	channelName := r.FormValue("channelName")
-	log.Println("Incoming request to " + r.RequestURI + " for user " + channelName)
 	token, _ := tw.GetAppBearerToken(clientID, clientSecret)
 	user, err := tw.GetChannelIDByName(clientID, token.AccessToken, channelName)
 	if err != nil {

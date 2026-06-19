@@ -1,9 +1,9 @@
 package twitch
 
 import (
+	db "SA/lib/DB"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -24,20 +24,8 @@ type UserAuth struct {
 	Expires_in int      `json:"expires_in"`
 }
 
-// Login page for twitch app
-func (a *App) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	existingCookie, _ := a.OAuthGetCookie(w, r)
-	w.Header().Add("Content-Type", "text/html")
-	if existingCookie != nil {
-		fmt.Fprintf(w, "Already logged in. Token: %s", existingCookie.Value)
-	} else {
-		fmt.Fprint(w, "Not logged in, navigate to <a href=\"/auth/oauth\">/auth/oauth</a>")
-	}
-}
-
 // Sends the request to the oAuth provider
 func (a *App) OAuthHandler(w http.ResponseWriter, r *http.Request) {
-	// authCode, _ := oauth2.AuthCodeOption
 	url := a.Config.AuthCodeURL("StreamAssistant", oauth2.AccessTypeOffline)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
@@ -54,27 +42,28 @@ func (a *App) OAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Save cookie in user's browser
-	cookie := http.Cookie{
-		Name:     "SAoAuth2",
-		Value:    userToken.AccessToken,
-		Path:     "/",
-		Expires:  userToken.Expiry,
-		HttpOnly: true,
-		Secure:   false,
-		SameSite: http.SameSiteStrictMode,
+	validatedToken, err := a.OAuthValidate(*userToken)
+	if err != nil {
+		log.Println(err.Error())
+		fmt.Fprintln(w, "Failed to validate oAuth token")
+		return
 	}
-	http.SetCookie(w, &cookie)
-	fmt.Println(w.Header().Get("Set-Cookie"))
+	twitchUser := db.TwitchUser{
+		UserID:            validatedToken.User_id,
+		UserName:          validatedToken.Login,
+		AccessToken:       userToken.AccessToken,
+		RefreshToken:      userToken.AccessToken,
+		AccessTokenExpiry: userToken.Expiry.Unix(),
+	}
+	con, _ := db.OpenDB()
+	defer db.AddTwitchUser(con, twitchUser)
 	fmt.Fprintln(w, "Successfully authorized Stream Assistant!")
-	fmt.Fprintf(w, "Token type: %s\n", userToken.TokenType)
-	fmt.Fprintf(w, "Access token: %s\n", userToken.AccessToken)
-	fmt.Fprintf(w, "Refresh token: %s\n", userToken.RefreshToken)
-	fmt.Fprintf(w, "Expires in %d seconds\n", userToken.ExpiresIn)
-	fmt.Fprintln(w, "DO NOT SHARE THIS INFO")
-	a.OAuthValidate(*userToken)
+	fmt.Fprintf(w, "Login: %s", validatedToken.Login)
+	fmt.Fprintf(w, "UserID: %s", validatedToken.User_id)
+	fmt.Fprintf(w, "ClienID (ID of this application): %s", validatedToken.Client_id)
 }
 
+// Validates token and returns user object
 func (a *App) OAuthValidate(token oauth2.Token) (UserAuth, error) {
 	hc := http.Client{}
 	url := "https://id.twitch.tv/oauth2/validate"
@@ -102,28 +91,4 @@ func (a *App) OAuthValidate(token oauth2.Token) (UserAuth, error) {
 	println(validatedInfo.User_id)
 
 	return validatedInfo, nil
-}
-
-func (a *App) oAuthSetCookie(w http.ResponseWriter, r *http.Request, cookie http.Cookie) {
-	existingCookie, _ := a.OAuthGetCookie(w, r)
-	log.Printf("Setting cookie: %v", cookie)
-	if existingCookie != nil {
-		log.Printf("Found cookie: %s", existingCookie)
-		return
-	}
-	http.SetCookie(w, &cookie)
-}
-
-func (a *App) OAuthGetCookie(w http.ResponseWriter, r *http.Request) (*http.Cookie, error) {
-	cookie, err := r.Cookie("SAoAuth2")
-	if err != nil {
-		switch {
-		case errors.Is(err, http.ErrNoCookie):
-			return nil, err
-		default:
-			log.Println(err)
-			http.Error(w, "Server error", http.StatusInternalServerError)
-		}
-	}
-	return cookie, nil
 }

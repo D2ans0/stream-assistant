@@ -1,4 +1,4 @@
-package handlers
+package common
 
 import (
 	"crypto/rsa"
@@ -9,12 +9,16 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var hmacSampleSecret []byte
-var rsaPrivateKey *rsa.PrivateKey
-var rsaPublicKey *rsa.PublicKey
+var (
+	rsaPrivateKeyPath = "private_key.pem"
+	rsaPublicKeyPath  = "public_key.pem"
+	rsaPrivateKey     *rsa.PrivateKey
+	rsaPublicKey      *rsa.PublicKey
+)
 
-func Init() {
-	if keyData, err := os.ReadFile("public_key.pem"); err == nil {
+// Loads private and public keys into memory
+func InitJWT() {
+	if keyData, err := os.ReadFile(rsaPublicKeyPath); err == nil {
 		rsaPublicKey, err = jwt.ParseRSAPublicKeyFromPEM(keyData)
 		if err != nil {
 			panic(err)
@@ -22,7 +26,7 @@ func Init() {
 	} else {
 		panic(err)
 	}
-	if keyData, err := os.ReadFile("private_key.pem"); err == nil {
+	if keyData, err := os.ReadFile(rsaPrivateKeyPath); err == nil {
 		rsaPrivateKey, err = jwt.ParseRSAPrivateKeyFromPEM(keyData)
 		if err != nil {
 			panic(err)
@@ -32,6 +36,7 @@ func Init() {
 	}
 }
 
+// Signs claims and returns the JWT
 func SignedJWT(claims jwt.Claims) (string, error) {
 	t := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	s, err := t.SignedString(rsaPrivateKey)
@@ -43,7 +48,7 @@ func SignedJWT(claims jwt.Claims) (string, error) {
 }
 
 // Returns true if JWT could be validated, otherwise returns false
-func ValidateJWT(signedJWT string) bool {
+func validateJWT(signedJWT string) jwt.Token {
 	token, err := jwt.Parse(signedJWT, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("Invalid signing method: %v", token.Header["alg"])
@@ -53,11 +58,17 @@ func ValidateJWT(signedJWT string) bool {
 
 	if err != nil {
 		log.Printf("Signature validation error: %s", err.Error())
-		return false
+		return jwt.Token{}
 	}
+	return *token
+}
 
-	if token.Valid {
-		return true
+func ParseJWT(signedJWT string) (claims jwt.MapClaims, valid bool) {
+	token := validateJWT(signedJWT)
+	if token.Valid != true {
+		return nil, false
 	}
-	return false
+	claims = token.Claims.(jwt.MapClaims)
+	// fmt.Printf("claims: %v\n", claims["Name"])
+	return claims, true
 }

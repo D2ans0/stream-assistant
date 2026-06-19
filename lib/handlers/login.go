@@ -2,6 +2,7 @@ package handlers
 
 import (
 	db "SA/lib/DB"
+	"SA/lib/common"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,16 +14,14 @@ import (
 const authCookieName = "Auth"
 
 func LoginGet(w http.ResponseWriter, r *http.Request) {
-	existingCookie, err := r.Cookie(authCookieName)
-	if err == nil && ValidateJWT(existingCookie.Value) {
-		fmt.Fprintf(w, "Already logged in. Token: %s", existingCookie.Value)
+	if isLoggedIn(r) {
+		fmt.Fprintf(w, "Already logged in")
 	} else {
 		http.ServeFile(w, r, "web/login.html")
 	}
 }
 
 func LoginPost(w http.ResponseWriter, r *http.Request) {
-	log.Println("Incoming request to " + r.RequestURI)
 	userName := r.FormValue("user")
 	userPass := r.FormValue("pass")
 	rememberMe := r.FormValue("remember")
@@ -32,17 +31,12 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userDB, err := db.GetAppUserByName(con, userName)
-	if err != nil {
-		log.Println(err.Error())
-		return
-	}
-	if userDB.Pass == userPass {
+	if err == nil && userDB.Pass == common.HashPassword(userPass, userDB.Salt) {
 		claims := jwt.MapClaims{
-			"ID":    25,
-			"Name":  "Stumpy",
-			"Admin": true,
+			"ID":   25,
+			"Name": "Stumpy",
 		}
-		jwt, err := SignedJWT(claims)
+		jwt, err := common.SignedJWT(claims)
 		if err != nil {
 			log.Println(err.Error())
 			return
@@ -78,7 +72,28 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	existingCookie.Value = ""
 	existingCookie.Expires = time.Unix(0, 0)
-	log.Println(existingCookie.Expires)
 	http.SetCookie(w, existingCookie)
 	http.Redirect(w, r, "/login", http.StatusPermanentRedirect)
+}
+
+// Check if user JWT exists, is valid, and user exists in database
+func isLoggedIn(r *http.Request) bool {
+	existingCookie, err := r.Cookie(authCookieName)
+	if err != nil {
+		return false
+	}
+	token, tokenValidity := common.ParseJWT(existingCookie.Value)
+
+	name, ok := token["Name"].(string)
+	if !ok {
+		return false
+	}
+
+	con, err := db.OpenDB()
+	existingUser, _ := db.GetAppUserByName(con, name)
+	if err == nil && tokenValidity && existingUser.Name == name {
+		return true
+	} else {
+		return false
+	}
 }
