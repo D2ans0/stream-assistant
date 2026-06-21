@@ -27,3 +27,11 @@ type User struct {
 type BroadcastProperties struct {
 	Title *string
 }
+
+type UserAuth struct {
+	Client_id  string   `json:"client_id"`
+	Login      string   `json:"login"`
+	Scopes     []string `json:"scopes"`
+	User_id    string   `json:"user_id"`
+	Expires_in int      `json:"expires_in"`
+}

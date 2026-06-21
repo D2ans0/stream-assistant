@@ -16,14 +16,6 @@ type App struct {
 	Config *oauth2.Config
 }
 
-type UserAuth struct {
-	Client_id  string   `json:"client_id"`
-	Login      string   `json:"login"`
-	Scopes     []string `json:"scopes"`
-	User_id    string   `json:"user_id"`
-	Expires_in int      `json:"expires_in"`
-}
-
 // Sends the request to the oAuth provider
 func (a *App) OAuthHandler(w http.ResponseWriter, r *http.Request) {
 	url := a.Config.AuthCodeURL("StreamAssistant", oauth2.AccessTypeOffline)
