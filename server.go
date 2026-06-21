@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"golang.org/x/oauth2"
 )
@@ -51,6 +52,7 @@ func webServer() {
 
 // Create and setup everything
 func init() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	db.InitDatabase()
 	common.InitJWT()
 	endpoint := oauth2.Endpoint{
@@ -70,18 +72,22 @@ func init() {
 }
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	// initialize()
 	con, _ := db.OpenDB()
 	newAppUser := db.AppUser{
-		Name:  "Stumpy",
-		Pass:  "Somepass",
-		Admin: true,
+		Name:        "Stumpy",
+		Pass:        "Somepass",
+		Permissions: db.Owner,
+		Channels:    db.ChannelPerm{"Stumpy": 4},
 	}
 
 	db.AddAppUser(con, newAppUser)
-	user, _ := db.GetAppUserByName(con, "Stumpy")
-	log.Printf("Username: %s", user.Name)
+	if user, err := db.GetAppUserByName(con, "Stumpy"); err != nil {
+		println(err.Error())
+		os.Exit(1)
+	} else {
+		log.Printf("Username: %s", user.Name)
+		log.Printf("Channels: %d", user.Channels["d2ans0"])
+	}
 
 	webServer()
 }

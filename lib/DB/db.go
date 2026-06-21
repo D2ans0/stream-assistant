@@ -3,6 +3,7 @@ package db
 import (
 	"SA/lib/common"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -12,12 +13,24 @@ import (
 
 const userTableName = "users"
 
+// Level of permissions available to user
+type PermLevel int
+type ChannelPerm map[string]PermLevel
+
+const (
+	User      PermLevel = iota // Can control items directly related to the broadcast
+	Moderator                  // Grants moderator access to the user
+	Admin                      // Can set any available options
+	Owner                      // Same as admin, but permissions cannot be stripped by admins
+)
+
 // AppUser properties
 type AppUser struct {
-	Name  string // Username used for signing in
-	Pass  string // Plain-text password only used for user creation, afterwars a hashed and salted version is returned
-	Salt  string // Salt is generated on user creation, use GetAppUserByName() to get actual salt
-	Admin bool   // Whether the user has application admin permisions
+	Name        string      // Username used for signing in
+	Pass        string      // Plain-text password only used for user creation, afterwars a hashed and salted version is returned
+	Salt        string      // Salt is generated on user creation, use GetAppUserByName() to get actual salt
+	Permissions PermLevel   // Application permission level
+	Channels    ChannelPerm // Channels the user can access
 }
 
 const twitchTableName = "twitchUsers"
@@ -50,7 +63,8 @@ func InitDatabase() {
 			Name TEXT PRIMARY KEY,
 			Pass TEXT,
 			Salt TEXT,
-			Admin BOOL
+			PermsLevel INT,
+			Channels TEXT
 		);`, userTableName)
 		_, err = db.Exec(sqlQuery)
 		if err != nil {
@@ -90,15 +104,16 @@ func InitDatabase() {
 
 }
 
+// Opens Database for the app
 func OpenDB() (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", "file:SA.db")
+
 	if err != nil {
 		log.Println("Failed to open DB")
 		log.Println(err.Error())
 		return nil, err
 	}
-	err = db.Ping()
-	if err != nil {
+	if err := db.Ping(); err != nil {
 		log.Println("Failed to ping DB")
 		log.Println(err.Error())
 		return nil, err
@@ -106,6 +121,7 @@ func OpenDB() (*sql.DB, error) {
 	return db, err
 }
 
+// Adds App user
 func AddAppUser(db *sql.DB, user AppUser) error {
 	existingUser, _ := GetAppUserByName(db, user.Name)
 	if cmp.Equal(existingUser.Name, user.Name) {
@@ -114,12 +130,14 @@ func AddAppUser(db *sql.DB, user AppUser) error {
 	}
 	user.Salt = common.GenerateSalt()
 	user.Pass = common.HashPassword(user.Pass, user.Salt)
-	sqlQuery := fmt.Sprintf("INSERT INTO %s VALUES ('%s', '%s', '%s', '%t')",
+	channelsJSON, _ := json.Marshal(user.Channels)
+	sqlQuery := fmt.Sprintf("INSERT INTO %s VALUES ('%s', '%s', '%s', '%d', '%s')",
 		userTableName,
 		user.Name,
 		user.Pass,
 		user.Salt,
-		user.Admin,
+		user.Permissions,
+		channelsJSON,
 	)
 	_, err := db.Exec(sqlQuery)
 	if err != nil {
@@ -131,6 +149,7 @@ func AddAppUser(db *sql.DB, user AppUser) error {
 	return nil
 }
 
+// Adds Twitch User to the database
 func AddTwitchUser(db *sql.DB, user TwitchUser) error {
 	existingUser, _ := GetTwitchUserByID(db, user.UserID)
 	if cmp.Equal(existingUser, user) {
@@ -147,7 +166,7 @@ func AddTwitchUser(db *sql.DB, user TwitchUser) error {
 	)
 	_, err := db.Exec(sqlQuery)
 	if err != nil {
-		log.Println("Failed to create user")
+		log.Printf("Failed to create user %s", user.UserName)
 		log.Println(err.Error())
 		return err
 	}
@@ -155,48 +174,49 @@ func AddTwitchUser(db *sql.DB, user TwitchUser) error {
 	return nil
 }
 
+// Returns the App user by searching for the specified name
 func GetAppUserByName(db *sql.DB, userName string) (AppUser, error) {
-	var err error
 	sqlQuery := fmt.Sprintf("SELECT * FROM %s WHERE Name='%s'", userTableName, userName)
-	err = db.Ping()
-	if err != nil {
-		log.Println("Failed to ping")
-		log.Println(err.Error())
+	if err := db.Ping(); err != nil {
+		log.Println("Failed to contact DB")
 		return AppUser{}, err
 	}
 	result := db.QueryRow(sqlQuery)
 	u := AppUser{}
-	err = result.Scan(
+	var rawChannelsJSON []byte
+	if err := result.Scan(
 		&u.Name,
 		&u.Pass,
 		&u.Salt,
-		&u.Admin,
-	)
-	if err != nil {
+		&u.Permissions,
+		&rawChannelsJSON,
+	); err != nil {
+		return AppUser{}, err
+	}
+
+	if err := json.Unmarshal(rawChannelsJSON, &u.Channels); err != nil {
 		return AppUser{}, err
 	}
 	return u, nil
 }
 
+// Returns the App user by searching for the specified name
 func GetTwitchUserByID(db *sql.DB, id string) (TwitchUser, error) {
-	var err error
 	sqlQuery := fmt.Sprintf("SELECT * FROM %s WHERE UserID='%s'", twitchTableName, id)
-	err = db.Ping()
-	if err != nil {
+	if err := db.Ping(); err != nil {
 		log.Println("Failed to ping")
 		log.Println(err.Error())
 		return TwitchUser{}, err
 	}
 	result := db.QueryRow(sqlQuery)
 	u := TwitchUser{}
-	err = result.Scan(
+	if err := result.Scan(
 		&u.UserID,
 		&u.UserName,
 		&u.AccessToken,
 		&u.RefreshToken,
 		&u.AccessTokenExpiry,
-	)
-	if err != nil {
+	); err != nil {
 		return TwitchUser{}, err
 	}
 	return u, nil
