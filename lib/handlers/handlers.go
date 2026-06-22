@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	tw "SA/lib/twitch"
+	db "SA/lib/DB"
+	tw "SA/lib/handlers/twitch"
 	"fmt"
 	"net/http"
 )
@@ -27,10 +28,35 @@ func Root(w http.ResponseWriter, r *http.Request) {
 
 func GetChannelIDByName(w http.ResponseWriter, r *http.Request) {
 	channelName := r.FormValue("channelName")
+	// token, _ := tw.GetAppBearerToken(clientID, clientSecret)
 	token, _ := tw.GetAppBearerToken(clientID, clientSecret)
 	user, err := tw.GetChannelIDByName(clientID, token.AccessToken, channelName)
 	if err != nil {
 		fmt.Fprintf(w, "%s", err)
 	}
 	fmt.Fprintf(w, "%s", user.Data[0].ID)
+}
+
+func TwitchOauth(w http.ResponseWriter, r *http.Request) {
+	if loggedInUser(r) != nil {
+		oAuth2 := tw.GetConfig()
+		oAuth2.OAuthHandler(w, r)
+	} else {
+		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+	}
+}
+
+func TwitchOAuthCallback(w http.ResponseWriter, r *http.Request) {
+	if user := loggedInUser(r); user != nil {
+		oAuth2 := tw.GetConfig()
+		user, err := oAuth2.OAuthCallbackHandler(w, r, *user)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else {
+			con, _ := db.OpenDB()
+			defer db.AddTwitchUser(con, user)
+		}
+	} else {
+		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+	}
 }

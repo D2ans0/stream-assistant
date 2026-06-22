@@ -4,7 +4,7 @@ import (
 	db "SA/lib/DB"
 	"SA/lib/common"
 	"SA/lib/handlers"
-	tw "SA/lib/twitch"
+
 	"fmt"
 	"log"
 	"net/http"
@@ -13,11 +13,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-var (
-	clientID     string
-	clientSecret string
-	conf         *oauth2.Config
-)
+var conf *oauth2.Config
 
 func logWrapperFunc(handler func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -35,12 +31,12 @@ func logWrapperHandler(handler http.Handler) http.Handler {
 
 func webServer() {
 	fs := http.FileServer(http.Dir("./web"))
-	app := tw.App{Config: conf}
+	// app := tw.App{Config: conf}
 	mux := http.NewServeMux()
 	mux.Handle("/", logWrapperHandler(fs))
 	mux.HandleFunc("POST /twitch/getChannelID", logWrapperFunc(handlers.GetChannelIDByName))
-	mux.HandleFunc("GET /twitch/oauth", logWrapperFunc(app.OAuthHandler))
-	mux.HandleFunc("GET /twitch/callback", logWrapperFunc(app.OAuthCallbackHandler))
+	mux.HandleFunc("GET /twitch/oauth", logWrapperFunc(handlers.TwitchOauth))
+	mux.HandleFunc("GET /twitch/callback", logWrapperFunc(handlers.TwitchOAuthCallback))
 	mux.HandleFunc("GET /login", logWrapperFunc(handlers.LoginGet))
 	mux.HandleFunc("POST /login", logWrapperFunc(handlers.LoginPost))
 	mux.HandleFunc("GET /logout", logWrapperFunc(handlers.Logout))
@@ -55,32 +51,29 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	db.InitDatabase()
 	common.InitJWT()
-	endpoint := oauth2.Endpoint{
-		AuthURL:  "https://id.twitch.tv/oauth2/authorize",
-		TokenURL: "https://id.twitch.tv/oauth2/token",
-	}
-	conf = &oauth2.Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		RedirectURL:  "http://localhost:3000/twitch/callback",
-		Scopes:       []string{},
-		Endpoint:     endpoint,
-	}
-	type App struct {
-		config *oauth2.Config
-	}
 }
 
 func main() {
 	con, _ := db.OpenDB()
-	newAppUser := db.AppUser{
-		Name:        "Stumpy",
-		Pass:        "Somepass",
-		Permissions: db.Owner,
-		Channels:    db.ChannelPerm{"Stumpy": 4},
-	}
+	// actions := db.ChannelAction{
+	// 	ActionType: db.Add,
+	// 	PermLevel:  db.User,
+	// }
+	// db.ModifyAppUserChannel(con, "Stumpy", "Poppies", actions)
+	// actions.ActionType = db.Modify
+	// actions.PermLevel = db.Admin
+	// db.ModifyAppUserChannel(con, "Stumpy", "d2ans0", actions)
+	// actions.ActionType = db.Remove
+	// db.ModifyAppUserChannel(con, "Stumpy", "Poppies", actions)
+	// os.Exit(0)
+	// newAppUser := db.AppUser{
+	// 	Name:        "Stumpy",
+	// 	Pass:        "123",
+	// 	Permissions: db.Owner,
+	// 	Channels:    db.ChannelPerm{"Stumpy": 4},
+	// }
 
-	db.AddAppUser(con, newAppUser)
+	// db.AddAppUser(con, newAppUser)
 	if user, err := db.GetAppUserByName(con, "Stumpy"); err != nil {
 		println(err.Error())
 		os.Exit(1)

@@ -14,7 +14,7 @@ import (
 const authCookieName = "Auth"
 
 func LoginGet(w http.ResponseWriter, r *http.Request) {
-	if isLoggedIn(r) {
+	if loggedInUser(r) != nil {
 		fmt.Fprintf(w, "Already logged in")
 	} else {
 		http.ServeFile(w, r, "web/login.html")
@@ -48,7 +48,7 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 			Expires:  time.Now().Add(600 * time.Second),
 			HttpOnly: true,
 			Secure:   false,
-			SameSite: http.SameSiteStrictMode,
+			SameSite: http.SameSiteLaxMode,
 		}
 		if rememberMe == "on" {
 			cookie.Expires = time.Now().Add(time.Hour * 365 * 24)
@@ -77,23 +77,23 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 // Check if user JWT exists, is valid, and user exists in database
-func isLoggedIn(r *http.Request) bool {
+func loggedInUser(r *http.Request) *string {
 	existingCookie, err := r.Cookie(authCookieName)
 	if err != nil {
-		return false
+		return nil
 	}
 	token, tokenValidity := common.ParseJWT(existingCookie.Value)
 
 	name, ok := token["Name"].(string)
 	if !ok {
-		return false
+		return nil
 	}
 
 	con, err := db.OpenDB()
 	existingUser, _ := db.GetAppUserByName(con, name)
 	if err == nil && tokenValidity && existingUser.Name == name {
-		return true
+		return &name
 	} else {
-		return false
+		return nil
 	}
 }

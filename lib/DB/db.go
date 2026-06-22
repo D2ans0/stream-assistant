@@ -4,24 +4,42 @@ import (
 	"SA/lib/common"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/driver"
 )
 
+var ErrUserNotFound = errors.New("User not found")
+
 const userTableName = "users"
 
-// Level of permissions available to user
-type PermLevel int
 type ChannelPerm map[string]PermLevel
+type ChannelActionType int
 
 const (
-	User      PermLevel = iota // Can control items directly related to the broadcast
-	Moderator                  // Grants moderator access to the user
-	Admin                      // Can set any available options
-	Owner                      // Same as admin, but permissions cannot be stripped by admins
+	Add    ChannelActionType = iota // Adds access to a channel
+	Modify                          // Modifies the level of access to a channel
+	Remove                          // Removes all access to the channel
+)
+
+type ChannelAction struct {
+	ActionType ChannelActionType // Add/Modify/Remove
+	PermLevel  PermLevel         // Optional for Delete channel action
+}
+
+// Level of permissions available to user, same "system" used for both platform perms and channel perms
+type PermLevel int
+
+const (
+	Undefined PermLevel = iota
+	User                // Can control items directly related to the broadcast
+	Moderator           // Grants moderator access to the user
+	Admin               // Can set any available options
+	Owner               // Same as admin, but permissions cannot be stripped by admins
 )
 
 // AppUser properties
@@ -30,7 +48,7 @@ type AppUser struct {
 	Pass        string      // Plain-text password only used for user creation, afterwars a hashed and salted version is returned
 	Salt        string      // Salt is generated on user creation, use GetAppUserByName() to get actual salt
 	Permissions PermLevel   // Application permission level
-	Channels    ChannelPerm // Channels the user can access
+	Channels    ChannelPerm // Channels the user can access and the access level
 }
 
 const twitchTableName = "twitchUsers"
@@ -90,7 +108,7 @@ func InitDatabase() {
 			UserName TEXT,
 			AccessToken TEXT,
 			RefreshToken TEXT,
-			AccessTokenExpiry UInt64
+			AccessTokenExpiry Int64
 		);`, twitchTableName)
 		_, err = db.Exec(sqlQuery)
 		if err != nil {
@@ -110,11 +128,6 @@ func OpenDB() (*sql.DB, error) {
 
 	if err != nil {
 		log.Println("Failed to open DB")
-		log.Println(err.Error())
-		return nil, err
-	}
-	if err := db.Ping(); err != nil {
-		log.Println("Failed to ping DB")
 		log.Println(err.Error())
 		return nil, err
 	}
@@ -166,8 +179,13 @@ func AddTwitchUser(db *sql.DB, user TwitchUser) error {
 	)
 	_, err := db.Exec(sqlQuery)
 	if err != nil {
-		log.Printf("Failed to create user %s", user.UserName)
-		log.Println(err.Error())
+		var sqlErr *sqlite3.Error
+		errors.As(err, &sqlErr)
+		if sqlErr.ExtendedCode() == sqlite3.CONSTRAINT_PRIMARYKEY {
+			log.Printf("Channel %s already exists!", user.UserName)
+		} else {
+			log.Println(err.Error())
+		}
 		return err
 	}
 	log.Printf("Added user %s to %s", user.UserName, twitchTableName)
@@ -177,10 +195,6 @@ func AddTwitchUser(db *sql.DB, user TwitchUser) error {
 // Returns the App user by searching for the specified name
 func GetAppUserByName(db *sql.DB, userName string) (AppUser, error) {
 	sqlQuery := fmt.Sprintf("SELECT * FROM %s WHERE Name='%s'", userTableName, userName)
-	if err := db.Ping(); err != nil {
-		log.Println("Failed to contact DB")
-		return AppUser{}, err
-	}
 	result := db.QueryRow(sqlQuery)
 	u := AppUser{}
 	var rawChannelsJSON []byte
@@ -200,14 +214,81 @@ func GetAppUserByName(db *sql.DB, userName string) (AppUser, error) {
 	return u, nil
 }
 
+// Returns a map with what channels the user has access to
+func GetAppUserChannels(db *sql.DB, userName string) (ChannelPerm, error) {
+	sqlQuery := fmt.Sprintf("SELECT Channels FROM %s WHERE Name='%s'", userTableName, userName)
+	result := db.QueryRow(sqlQuery)
+	var channels ChannelPerm
+	var rawChannelsJSON []byte
+	if err := result.Scan(&rawChannelsJSON); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	if err := json.Unmarshal(rawChannelsJSON, &channels); err != nil {
+		return nil, err
+	}
+	return channels, nil
+}
+
+func ModifyAppUserChannel(db *sql.DB, userName string, channelName string, action ChannelAction) error {
+	var channelsJSON []byte
+	var err error
+	channels := make(ChannelPerm)
+	logMessage := "%s channel perms for %s to %s"
+	sqlQuery := "UPDATE %s SET %s = '%s' WHERE Name='%s'"
+
+	// channels, channelsErr := GetAppUserChannels(db, userName)
+	channelsErr := fmt.Errorf("Remove failed: User %s doesn't exist", channelName)
+	switch action.ActionType {
+	case Add:
+		if _, ok := channels[channelName]; ok {
+			return fmt.Errorf("Add failed: User %s already exists", channelName)
+		}
+		channels[channelName] = action.PermLevel
+		// if channelsErr != nil {
+		// } else {
+		// }
+		channelsJSON, err = json.Marshal(&channels)
+		println(channelsJSON)
+		sqlQuery = fmt.Sprintf(sqlQuery, userTableName, "Channels", channelsJSON, userName)
+		logMessage = fmt.Sprintf(logMessage, "Added", channelName, userName)
+	case Modify:
+		if _, ok := channels[channelName]; !ok || channelsErr != nil {
+			return fmt.Errorf("Modify failed: User %s doesn't exist", channelName)
+		}
+		channels[channelName] = action.PermLevel
+		channelsJSON, err = json.Marshal(&channels)
+		sqlQuery = fmt.Sprintf(sqlQuery, userTableName, "Channels", channelsJSON, userName)
+		logMessage = fmt.Sprintf(logMessage, "Modified", channelName, userName)
+	case Remove:
+		if _, ok := channels[channelName]; !ok || channelsErr != nil {
+			return fmt.Errorf("Remove failed: User %s doesn't exist", channelName)
+		}
+		delete(channels, channelName)
+		channelsJSON, err = json.Marshal(&channels)
+		sqlQuery = fmt.Sprintf(sqlQuery, userTableName, "Channels", channelsJSON, userName)
+		logMessage = fmt.Sprintf(logMessage, "Removed", channelName, userName)
+	default:
+		return errors.New("Invalid ActionType")
+	}
+
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(sqlQuery)
+	if err != nil {
+		return err
+	}
+	log.Println(logMessage)
+	return nil
+}
+
 // Returns the App user by searching for the specified name
 func GetTwitchUserByID(db *sql.DB, id string) (TwitchUser, error) {
 	sqlQuery := fmt.Sprintf("SELECT * FROM %s WHERE UserID='%s'", twitchTableName, id)
-	if err := db.Ping(); err != nil {
-		log.Println("Failed to ping")
-		log.Println(err.Error())
-		return TwitchUser{}, err
-	}
 	result := db.QueryRow(sqlQuery)
 	u := TwitchUser{}
 	if err := result.Scan(
