@@ -31,7 +31,6 @@ func logWrapperHandler(handler http.Handler) http.Handler {
 
 func webServer() {
 	fs := http.FileServer(http.Dir("./web"))
-	// app := tw.App{Config: conf}
 	mux := http.NewServeMux()
 	mux.Handle("/", logWrapperHandler(fs))
 	mux.HandleFunc("POST /twitch/getChannelID", logWrapperFunc(handlers.GetChannelIDByName))
