@@ -2,6 +2,7 @@ package twitch
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -31,7 +32,7 @@ func GetAppBearerToken(clientID string, clientSecret string) (BearerToken, error
 	return result, nil
 }
 
-func GetChannelIDByName(clientID string, token string, channelName string) (User, error) {
+func GetChannelIDByName(clientID string, token string, channelName string) (*User, error) {
 	var result User
 	hc := http.Client{}
 	url := "https://api.twitch.tv/helix/users?login=" + channelName
@@ -39,19 +40,27 @@ func GetChannelIDByName(clientID string, token string, channelName string) (User
 	req.Header.Add("client-id", clientID)
 	req.Header.Add("Authorization", "Bearer "+token)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 
 	res, err := hc.Do(req)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
+	if res.StatusCode != 200 {
+		log.Println(res.StatusCode)
+		return nil, errors.New(string(body))
+	}
 	if err := json.Unmarshal(body, &result); err != nil {
 		log.Println("ERROR: Cannot unmarshal JSON")
+		return nil, errors.New("ERROR: Cannot unmarshal JSON")
 	}
-	return result, nil
+	if len(result.Data) == 0 {
+		return nil, errors.New("User not found")
+	}
+	return &result, nil
 }
 
 func SetStreamTitle(channelID string, token string, clientID string, title string) {

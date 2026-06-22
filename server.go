@@ -39,6 +39,7 @@ func webServer() {
 	mux.HandleFunc("GET /login", logWrapperFunc(handlers.LoginGet))
 	mux.HandleFunc("POST /login", logWrapperFunc(handlers.LoginPost))
 	mux.HandleFunc("GET /logout", logWrapperFunc(handlers.Logout))
+	mux.HandleFunc("GET /dashboard", logWrapperFunc(handlers.Dashboard))
 	port := ":3000"
 	fmt.Println("Server is running on port" + port)
 

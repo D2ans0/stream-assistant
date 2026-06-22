@@ -15,7 +15,7 @@ const authCookieName = "Auth"
 
 func LoginGet(w http.ResponseWriter, r *http.Request) {
 	if loggedInUser(r) != nil {
-		fmt.Fprintf(w, "Already logged in")
+		http.Redirect(w, r, "/dashboard", http.StatusTemporaryRedirect)
 	} else {
 		http.ServeFile(w, r, "web/login.html")
 	}
@@ -73,7 +73,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	existingCookie.Value = ""
 	existingCookie.Expires = time.Unix(0, 0)
 	http.SetCookie(w, existingCookie)
-	http.Redirect(w, r, "/login", http.StatusPermanentRedirect)
+	http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
 }
 
 // Check if user JWT exists, is valid, and user exists in database
