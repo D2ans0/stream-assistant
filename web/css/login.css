@@ -1,0 +1,13 @@
+
+div.loginContainer {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  text-align: center;
+}
+
+#login {
+  text-shadow: 0.1rem 0.1rem 0.25rem rgba(var(--shadow-color),var(--shadow-opacity-medium));
+}
