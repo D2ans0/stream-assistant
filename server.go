@@ -74,6 +74,10 @@ func main() {
 	// }
 
 	// db.AddAppUser(con, newAppUser)
+	// app := tw.GetConfig()
+	// user, _ := db.GetTwitchUserByName(con, "d2ans0")
+	// app.RefreshAccessTokenForUser(user)
+	// os.Exit(1)
 	if user, err := db.GetAppUserByName(con, "Stumpy"); err != nil {
 		println(err.Error())
 		os.Exit(1)

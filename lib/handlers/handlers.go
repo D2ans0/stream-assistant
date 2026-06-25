@@ -49,6 +49,8 @@ func GetChannelIDByName(w http.ResponseWriter, r *http.Request) {
 	clientSecret = Config["ClientSecret"]
 	token, err := tw.GetAppBearerToken(clientID, clientSecret)
 	user, err := tw.GetChannelIDByName(clientID, token.AccessToken, channelName)
+	// TODO: make a proper handler for setting stream title
+	tw.SetStreamTitle("d2ans0", clientID, "this is a test")
 	if err != nil {
 		fmt.Fprintf(w, "%s", err.Error())
 	} else {
@@ -73,7 +75,7 @@ func TwitchOAuthCallback(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
 			con, _ := db.OpenDB()
-			defer db.AddTwitchUser(con, user)
+			defer db.AddOrReplaceTwitchUser(con, user)
 		}
 	} else {
 		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)

@@ -25,7 +25,10 @@ type User struct {
 }
 
 type BroadcastProperties struct {
-	Title *string
+	GameID              *string `json:"game_id,omitempty"`
+	BroadcasterLanguage *string `json:"broadcaster_language,omitempty"`
+	Title               *string `json:"title,omitempty"`
+	Delay               *int    `json:"delay,omitempty"`
 }
 
 type UserAuth struct {

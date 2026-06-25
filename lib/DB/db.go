@@ -192,6 +192,39 @@ func AddTwitchUser(db *sql.DB, user TwitchUser) error {
 	return nil
 }
 
+func AddOrReplaceTwitchUser(db *sql.DB, user TwitchUser) error {
+	err := AddTwitchUser(db, user)
+	if err != nil {
+		var sqlErr *sqlite3.Error
+		errors.As(err, &sqlErr)
+		println(err.Error())
+		if sqlErr.ExtendedCode() == sqlite3.CONSTRAINT_PRIMARYKEY {
+			tx, err := db.Begin()
+			if err != nil {
+				println(err.Error())
+				return err
+			}
+			println(fmt.Sprintf("DELETE from %s where UserID=%s", twitchTableName, user.UserID))
+			tx.Exec(fmt.Sprintf("DELETE from %s where UserID=%s", twitchTableName, user.UserID))
+			sqlQuery := fmt.Sprintf("INSERT INTO %s VALUES ('%s', '%s', '%s', '%s', %d)",
+				twitchTableName,
+				user.UserID,
+				user.UserName,
+				user.AccessToken,
+				user.RefreshToken,
+				user.AccessTokenExpiry,
+			)
+			tx.Exec(sqlQuery)
+			err = tx.Commit()
+			if err != nil {
+				println(err.Error())
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // Returns the App user by searching for the specified name
 func GetAppUserByName(db *sql.DB, userName string) (AppUser, error) {
 	sqlQuery := fmt.Sprintf("SELECT * FROM %s WHERE Name='%s'", userTableName, userName)
@@ -239,8 +272,6 @@ func ModifyAppUserChannel(db *sql.DB, userName string, channelName string, actio
 	channels := make(ChannelPerm)
 	logMessage := "%s channel perms for %s to %s"
 	sqlQuery := "UPDATE %s SET %s = '%s' WHERE Name='%s'"
-
-	// channels, channelsErr := GetAppUserChannels(db, userName)
 	channelsErr := fmt.Errorf("Remove failed: User %s doesn't exist", channelName)
 	switch action.ActionType {
 	case Add:
@@ -248,9 +279,6 @@ func ModifyAppUserChannel(db *sql.DB, userName string, channelName string, actio
 			return fmt.Errorf("Add failed: User %s already exists", channelName)
 		}
 		channels[channelName] = action.PermLevel
-		// if channelsErr != nil {
-		// } else {
-		// }
 		channelsJSON, err = json.Marshal(&channels)
 		println(channelsJSON)
 		sqlQuery = fmt.Sprintf(sqlQuery, userTableName, "Channels", channelsJSON, userName)
@@ -301,4 +329,44 @@ func GetTwitchUserByID(db *sql.DB, id string) (TwitchUser, error) {
 		return TwitchUser{}, err
 	}
 	return u, nil
+}
+
+func GetTwitchUserByName(db *sql.DB, name string) (*TwitchUser, error) {
+	sqlQuery := fmt.Sprintf("SELECT * FROM %s WHERE UserName='%s'", twitchTableName, name)
+	result := db.QueryRow(sqlQuery)
+	u := TwitchUser{}
+	if err := result.Scan(
+		&u.UserID,
+		&u.UserName,
+		&u.AccessToken,
+		&u.RefreshToken,
+		&u.AccessTokenExpiry,
+	); err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func UpdateTwitchUserAccessTokenByName(db *sql.DB, userName string, token string) error {
+	var err error
+	sqlQuery := "UPDATE %s SET %s = '%s' WHERE UserName='%s'"
+	sqlQuery = fmt.Sprintf(sqlQuery, twitchTableName, "AccessToken", token, userName)
+	_, err = db.Exec(sqlQuery)
+	if err != nil {
+		return err
+	} else {
+		return nil
+	}
+}
+
+func UpdateTwitchUserAccessTokenByID(db *sql.DB, ID string, token string) error {
+	var err error
+	sqlQuery := "UPDATE %s SET %s = '%s' WHERE UserID='%s'"
+	sqlQuery = fmt.Sprintf(sqlQuery, twitchTableName, "AccessToken", token, ID)
+	_, err = db.Exec(sqlQuery)
+	if err != nil {
+		return err
+	} else {
+		return nil
+	}
 }

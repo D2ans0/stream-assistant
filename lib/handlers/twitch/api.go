@@ -1,13 +1,13 @@
 package twitch
 
 import (
+	db "SA/lib/DB"
+	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"strings"
 )
 
 func GetAppBearerToken(clientID string, clientSecret string) (BearerToken, error) {
@@ -63,36 +63,35 @@ func GetChannelIDByName(clientID string, token string, channelName string) (*Use
 	return &result, nil
 }
 
-func SetStreamTitle(channelID string, token string, clientID string, title string) {
-	var result User
+func SetStreamTitle(channelName string, clientID string, title string) error {
+	var reqBody []byte
 	broadcastProperties := BroadcastProperties{
 		Title: &title,
 	}
-	var reqBody []byte
 	reqBody, err := json.Marshal(broadcastProperties)
 	log.Println(string(reqBody))
-	// return
-	// var writer io.Writer
 	hc := http.Client{}
-	url := "https://api.twitch.tv/helix/channels?broadcaster_id=" + channelID
-	req, err := http.NewRequest("PATCH", url, strings.NewReader(string(reqBody)))
+	con, _ := db.OpenDB()
+	user, _ := db.GetTwitchUserByName(con, channelName)
+	url := "https://api.twitch.tv/helix/channels?broadcaster_id=" + user.UserID
+	req, _ := http.NewRequest("PATCH", url, bytes.NewBuffer(reqBody))
 	req.Header.Add("client-id", clientID)
-	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("Authorization", "Bearer "+user.AccessToken)
 	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
-		fmt.Printf("err.Error(): %v\n", err.Error())
+		log.Println(err.Error())
+		return err
 	}
-
 	res, err := hc.Do(req)
 	if err != nil {
-		fmt.Printf("err.Error(): %v\n", err.Error())
+		log.Println(err.Error())
+		return err
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
-	log.Println(req.Header.Get("client-id"))
-	log.Println(url)
-	log.Println(string(body))
-	if err := json.Unmarshal(body, &result); err != nil {
-		log.Println("ERROR: Cannot unmarshal JSON")
+	if string(body) != "" {
+		return errors.New(string(body))
+	} else {
+		return nil
 	}
 }

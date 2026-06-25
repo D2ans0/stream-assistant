@@ -4,6 +4,7 @@ import (
 	db "SA/lib/DB"
 	"errors"
 	"os"
+	"time"
 
 	"context"
 	"encoding/json"
@@ -48,7 +49,7 @@ func GetConfig() App {
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		RedirectURL:  redirectURL,
-		Scopes:       []string{},
+		Scopes:       []string{"channel_editor"},
 		Endpoint:     endpoint,
 	}}
 	return conf
@@ -58,6 +59,10 @@ func GetConfig() App {
 func (a *App) OAuthHandler(w http.ResponseWriter, r *http.Request) {
 	url := a.Config.AuthCodeURL("StreamAssistant", oauth2.AccessTypeOffline)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+func (a *App) getAuthClient(token *oauth2.Token) *http.Client {
+	return a.Config.Client(context.Background(), token)
 }
 
 // Handles the redirect from the oAuth provider.
@@ -81,11 +86,10 @@ func (a *App) OAuthCallbackHandler(w http.ResponseWriter, r *http.Request, logge
 		UserID:            validatedToken.User_id,
 		UserName:          validatedToken.Login,
 		AccessToken:       userToken.AccessToken,
-		RefreshToken:      userToken.AccessToken,
+		RefreshToken:      userToken.RefreshToken,
 		AccessTokenExpiry: userToken.Expiry.Unix(),
 	}
 	con, _ := db.OpenDB()
-	defer db.AddTwitchUser(con, twitchUser)
 	if err := db.ModifyAppUserChannel(con, loggedInUser, twitchUser.UserName, db.ChannelAction{
 		ActionType: db.Add,
 		PermLevel:  db.Owner,
@@ -121,4 +125,30 @@ func (a *App) OAuthValidate(token oauth2.Token) (UserAuth, error) {
 	}
 
 	return validatedInfo, nil
+}
+
+func (a *App) refreshToken(token *oauth2.Token) *oauth2.Token {
+	tokenSource := a.Config.TokenSource(context.Background(), token)
+	newToken, err := tokenSource.Token()
+	if err != nil {
+		log.Println(err.Error())
+		return nil
+	}
+	return newToken
+}
+
+func (a *App) RefreshAccessTokenForUser(user *db.TwitchUser) error {
+	token := new(oauth2.Token)
+	token.AccessToken = user.AccessToken
+	token.RefreshToken = user.RefreshToken
+	token.Expiry = time.Unix(user.AccessTokenExpiry, 0)
+	token.TokenType = "Bearer"
+	newToken := a.refreshToken(token)
+	if con, err := db.OpenDB(); err != nil {
+		return err
+	} else {
+		println(newToken.AccessToken)
+		db.UpdateTwitchUserAccessTokenByID(con, user.UserID, newToken.AccessToken)
+		return nil
+	}
 }
