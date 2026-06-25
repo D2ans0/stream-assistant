@@ -1,20 +1,43 @@
+var player;
+var SelectedChannel
+const ChannelDropdownID = "channelDropdown"
+const NameFormID = "channelNameForm"
+const NameFormInputFieldID = "channelName"
+const TitleFormID = "streamTitleForm"
+const TitleFormInputFieldID = "streamTitle"
+const ChannelCookieName = "selectedChannel"
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-document.getElementById("channelNameForm").addEventListener("submit", function (e) {
+document.getElementById(NameFormID).addEventListener("submit", function (e) {
   e.preventDefault();
   getChannelID(e.target)
 });
-function init() {
-  populateStreamTitleChannelDropdown()
+
+document.getElementById(TitleFormID).addEventListener("submit", function (e) {
+  e.preventDefault();
+  setStreamTitle(e)
+});
+
+async function init() {
+  SelectedChannel = getCookie(ChannelCookieName);
+  if (SelectedChannel == null) {
+    SelectedChannel = "0" // should let the twitch player load, but fail to find a video if no cookie is set
+  }
+  console.log(SelectedChannel);
+  populateChannelDropdown(ChannelDropdownID);
+  loadChannelEmbed(SelectedChannel);
+  getStreamTitle(TitleFormInputFieldID);
 }
+
 async function rotateOnPress(e) {
   if (e.classList.contains("rotate")) {
-    return
+    return;
   }
-  e.classList.add("rotate")
-  await delay(1000)
-  e.classList.remove("rotate")
+  e.classList.add("rotate");
+  await delay(1000);
+  e.classList.remove("rotate");
 }
-function getChannelID(form) {
+
+async function getChannelID(form) {
   const URL = "/twitch/getChannelID";
   var formData = new FormData(form);
   try {
@@ -24,24 +47,48 @@ function getChannelID(form) {
     })
     .then(response => response.text())
     .then(data => {
-        document.getElementById("channelNameFormOutput").innerHTML = data;
+      document.getElementById(NameFormInputFieldID).value = ""
+        document.getElementById(NameFormInputFieldID).placeholder = data;
     })
   } catch (e) {
     console.error(e);
-    document.getElementById("channelNameFormOutput").innerHTML = e;
+    document.getElementById(NameFormInputFieldID).value = e;
   }
 }
-function sendChannelStreamTitle() {
-  console.log("changed title")
+
+function changeChannel(e) {
+  player.setChannel(e.value);
+  setCookie(ChannelCookieName, e.value, 365);
 }
-function populateStreamTitleChannelDropdown() {
+function populateChannelDropdown(dropdownID) {
   // placeholder, need to add api call for getting a user's accessible channels
   let data = [
-      "name_1",
-      "name_2"
+      "twitch",
+      "212th_attackbattalion"
   ];
-  var selectElement = document.getElementById('streamTitleChannelDropdown');
-  console.log(selectElement.childNodes)
+  var selectElement = document.getElementById(dropdownID);
+  console.log(selectElement.childNodes);
   selectElement.innerHTML = '';
   data.map(item => selectElement.appendChild(new Option(item, item)).cloneNode(true));
+  selectElement.value = SelectedChannel
+}
+
+function loadChannelEmbed(channelName) {
+  if (player != null) { document.getElementById("twitch-embed").innerHTML = ''; }
+  player = new Twitch.Player("twitch-embed", {
+    channel: channelName,
+    width: "100%",
+    height: "100%",
+    autoplay: false,
+    muted: true,
+    time: "0h0m0s"
+  });
+}
+
+function getStreamTitle(fieldName) {
+  e = document.getElementById(fieldName)
+  e.value = "PH - " + SelectedChannel + " - PH";
+}
+function setStreamTitle(e) {
+  console.log(e.value)
 }

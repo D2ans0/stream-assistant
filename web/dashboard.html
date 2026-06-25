@@ -9,17 +9,32 @@
     <link href="css/common.css" rel="stylesheet" />
     <link href="css/dashboard.css" rel="stylesheet" />
   </head>
+
   <body onload="init()">
     <button id="reload" title="Reload info on page" onclick="init(); rotateOnPress(this)"><i class="fa-solid fa-arrow-rotate-right"></i></button>
+    <div id="mainContainer">
+      <select id="channelDropdown" onchange="changeChannel(this)"></select>
+      <div id="twitch-embed"></div>
 
-    <form id="channelNameForm">
-      <label for="channelName">Get channel Name</label>
-      <input type="text" id="channelName" name="channelName">
-      <input type="submit" value="Submit">
-      <p id="channelNameFormOutput" class="formOutput"></p>
-    </form>
+      <form id="streamTitleForm">
+        <label for="streamTitle">Stream title<br></label>
+        <span class="text-form-wrapper">
+          <input type="text" id="streamTitle" name="streamTitle">
+          <input type="submit" value="Set">
+        </span>
+      </form>
+
+      <form id="channelNameForm">
+        <label for="channelName">Channel ID from name<br></label>
+        <span class="text-form-wrapper">
+          <input type="text" id="channelName" name="channelName">
+          <input type="submit" value="Get">
+        </span>
+      </form>
     
-    <select id="streamTitleChannelDropdown" onchange="sendChannelStreamTitle()"></select>
+    </div>
+    <script src="https://player.twitch.tv/js/embed/v1.js"></script>
+    <script src="js/common.js"></script>
     <script src="js/dashboard.js"></script>
   </body>
 </html>

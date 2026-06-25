@@ -2,19 +2,24 @@
   --highlight-color: #ff7900;
   --background-color: #003657;
   --text-color: #fff;
-  --shadow-opacity: 0.1;
   --shadow-opacity-light: 0.1;
   --shadow-opacity-medium: 0.5;
   --shadow-opacity-heavy: 0.8;
   --shadow-color: 0,0,0;
-  --white-shadow-color: rgba(255,255,255,var(--shadow-opacity));
+  --white-shadow-color: 255,255,255;
   --border-color: #000;
 }
 
 * {
   font-size: 30px;
+  font-weight: 500;
   font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
+
+::selection {
+    background-color: var(--highlight-color);
+    color: var(--text-color);
+  }
 
 body {
   background-color: var(--background-color);
