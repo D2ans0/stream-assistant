@@ -136,17 +136,35 @@ func (a *App) refreshToken(token *oauth2.Token) *oauth2.Token {
 	return newToken
 }
 
-func (a *App) RefreshAccessTokenForUser(user *db.TwitchUser) error {
-	token := new(oauth2.Token)
-	token.AccessToken = user.AccessToken
-	token.RefreshToken = user.RefreshToken
-	token.Expiry = time.Unix(user.AccessTokenExpiry, 0)
-	token.TokenType = "Bearer"
-	newToken := a.refreshToken(token)
-	if con, err := db.OpenDB(); err != nil {
-		return err
+func (a *App) RefreshAccessTokenForUser(userName string) error {
+	if con, err := db.OpenDB(); err == nil {
+		if user, err := db.GetTwitchUserByName(con, userName); err == nil {
+			token := new(oauth2.Token)
+			token.AccessToken = user.AccessToken
+			token.RefreshToken = user.RefreshToken
+			token.Expiry = time.Unix(user.AccessTokenExpiry, 0)
+			token.TokenType = "Bearer"
+			newToken := a.refreshToken(token)
+			db.UpdateTwitchUserAccessTokenByID(con, user.UserID, newToken.AccessToken)
+			return nil
+		} else {
+			return err
+		}
 	} else {
-		db.UpdateTwitchUserAccessTokenByID(con, user.UserID, newToken.AccessToken)
-		return nil
+		return err
+	}
+}
+
+func AccessTokenByName(userName string) (*string, error) {
+	conf := GetConfig()
+	conf.RefreshAccessTokenForUser(userName)
+	if con, err := db.OpenDB(); err == nil {
+		if user, err := db.GetTwitchUserByName(con, userName); err == nil {
+			return &user.AccessToken, nil
+		} else {
+			return nil, err
+		}
+	} else {
+		return nil, err
 	}
 }
