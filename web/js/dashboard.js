@@ -98,7 +98,7 @@ async function populateChannelDropdown(dropdownID) {
     // If no cookie is present, select the first channel
     if (SelectedChannel == 0) {
       selectElement.value = selectElement[0].value
-      SelectedChannel = selectElement[0].value // set cookie immediately
+      changeChannel(selectElement)
     } else {
       selectElement.value = SelectedChannel
     }
@@ -130,6 +130,7 @@ function getStreamTitle(fieldName) {
       e.value = data
     })
   } catch (e) {
+    console.error("getStreamTitleError");
     console.error(e);
     document.getElementById(NameFormInputFieldID).value = e;
   }
