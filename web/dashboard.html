@@ -13,9 +13,10 @@
   <body onload="init()">
     <button id="reload" title="Reload info on page" onclick="init(); rotateOnPress(this)"><i class="fa-solid fa-arrow-rotate-right"></i></button>
     <div id="mainContainer">
-      <select id="channelDropdown" onchange="changeChannel(this)"></select>
+    <div class="select-wrapper">
+      <select id="channelDropdown" onchange="changeChannel(this)" class="custom-select"></select>
+    </div>
       <div id="twitch-embed"></div>
-
       <form id="streamTitleForm">
         <label for="streamTitle">Stream title<br></label>
         <span class="text-form-wrapper">
