@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/ncruces/go-sqlite3"
@@ -270,22 +269,24 @@ func GetAppUserChannels(db *sql.DB, userName string) (ChannelPerm, error) {
 func ModifyAppUserChannel(db *sql.DB, userName string, channelName string, action ChannelAction) error {
 	var channelsJSON []byte
 	var err error
-	channels := make(ChannelPerm)
+	channels, err := GetUserAccessibleChannels(db, userName)
 	logMessage := "%s channel perms for %s to %s"
 	sqlQuery := "UPDATE %s SET %s = '%s' WHERE Name='%s'"
-	channelsErr := fmt.Errorf("Remove failed: User %s doesn't exist", channelName)
+
 	switch action.ActionType {
 	case Add:
 		if _, ok := channels[channelName]; ok {
+			log.Printf("Add failed: User %s already exists", channelName)
 			return fmt.Errorf("Add failed: User %s already exists", channelName)
 		}
 		channels[channelName] = action.PermLevel
 		channelsJSON, err = json.Marshal(&channels)
-		println(channelsJSON)
+		println(string(channelsJSON))
 		sqlQuery = fmt.Sprintf(sqlQuery, userTableName, "Channels", channelsJSON, userName)
 		logMessage = fmt.Sprintf(logMessage, "Added", channelName, userName)
 	case Modify:
-		if _, ok := channels[channelName]; !ok || channelsErr != nil {
+		if _, ok := channels[channelName]; !ok {
+			log.Printf("Modify failed: User %s doesn't exist", channelName)
 			return fmt.Errorf("Modify failed: User %s doesn't exist", channelName)
 		}
 		channels[channelName] = action.PermLevel
@@ -293,7 +294,8 @@ func ModifyAppUserChannel(db *sql.DB, userName string, channelName string, actio
 		sqlQuery = fmt.Sprintf(sqlQuery, userTableName, "Channels", channelsJSON, userName)
 		logMessage = fmt.Sprintf(logMessage, "Modified", channelName, userName)
 	case Remove:
-		if _, ok := channels[channelName]; !ok || channelsErr != nil {
+		if _, ok := channels[channelName]; !ok {
+			log.Printf("Remove failed: User %s doesn't exist", channelName)
 			return fmt.Errorf("Remove failed: User %s doesn't exist", channelName)
 		}
 		delete(channels, channelName)
@@ -372,14 +374,19 @@ func UpdateTwitchUserAccessTokenByID(db *sql.DB, ID string, token string) error 
 	}
 }
 
-func GetUserAccessibleChannels(db *sql.DB, appUserName string) (map[string]string, error) {
-	users := make(map[string]string)
+func GetUserAccessibleChannels(db *sql.DB, appUserName string) (ChannelPerm, error) {
 	if user, err := GetAppUserByName(db, appUserName); err != nil {
 		return nil, err
 	} else {
-		for key, val := range user.Channels {
-			users[key] = strconv.Itoa(int(val))
-		}
-		return users, nil
+		return user.Channels, nil
 	}
+}
+
+func IsChannelAccessibleByUser(db *sql.DB, appUserName string, channelName string) bool {
+	if channelMap, err := GetUserAccessibleChannels(db, appUserName); err == nil {
+		if _, ok := channelMap[channelName]; ok {
+			return true
+		}
+	}
+	return false
 }
