@@ -67,14 +67,12 @@ button#reload {
   transition: 0.1s all;
 
   input[type="text"] {
-    border: 2px solid var(--highlight-color);
     border-radius: 1rem;
     width: 100%;
     padding: 0;
     height: 100%;
     padding-right: 2rem;
     box-sizing:border-box;
-    outline: none;
     justify-content: center;
     text-indent: 2rem;
     &:focus {
