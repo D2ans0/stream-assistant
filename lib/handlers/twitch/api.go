@@ -121,8 +121,6 @@ func GetStreamTitle(channelName string, clientID string) (*string, error) {
 		return nil, err
 	} else {
 		body, _ := io.ReadAll(res.Body)
-		log.Println("reading body")
-		log.Println(string(body))
 		if err := json.Unmarshal(body, &result); err != nil {
 			println(err.Error())
 			return nil, err
