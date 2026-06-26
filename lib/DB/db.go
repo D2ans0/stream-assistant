@@ -350,6 +350,22 @@ func GetTwitchUserByName(db *sql.DB, name string) (*TwitchUser, error) {
 	return &u, nil
 }
 
+func TwitchNameToID(db *sql.DB, name string) (*string, error) {
+	if user, err := GetTwitchUserByName(db, name); err == nil {
+		return &user.UserID, nil
+	} else {
+		return nil, err
+	}
+}
+
+func TwitchIDNameToName(db *sql.DB, ID string) (*string, error) {
+	if user, err := GetTwitchUserByID(db, ID); err == nil {
+		return &user.UserName, nil
+	} else {
+		return nil, err
+	}
+}
+
 func UpdateTwitchUserAccessTokenByName(db *sql.DB, userName string, token string) error {
 	var err error
 	sqlQuery := "UPDATE %s SET %s = '%s' WHERE UserName='%s'"
@@ -382,10 +398,12 @@ func GetUserAccessibleChannels(db *sql.DB, appUserName string) (ChannelPerm, err
 	}
 }
 
-func IsChannelAccessibleByUser(db *sql.DB, appUserName string, channelName string) bool {
+func IsActionAllowedForUser(db *sql.DB, appUserName string, channelName string, neededAccessLevel PermLevel) bool {
 	if channelMap, err := GetUserAccessibleChannels(db, appUserName); err == nil {
-		if _, ok := channelMap[channelName]; ok {
-			return true
+		if accessLevel, ok := channelMap[channelName]; ok {
+			if accessLevel >= neededAccessLevel {
+				return true
+			}
 		}
 	}
 	return false
