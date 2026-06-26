@@ -38,3 +38,19 @@ type UserAuth struct {
 	User_id    string   `json:"user_id"`
 	Expires_in int      `json:"expires_in"`
 }
+
+type ChannelInfo struct {
+	Data []struct {
+		BroadcasterID               string   `json:"broadcaster_id"`
+		BroadcasterLogin            string   `json:"broadcaster_login"`
+		BroadcasterName             string   `json:"broadcaster_name"`
+		BroadcasterLanguage         string   `json:"broadcaster_language"`
+		GameID                      string   `json:"game_id"`
+		GameName                    string   `json:"game_name"`
+		Title                       string   `json:"title"`
+		Delay                       int      `json:"delay"`
+		Tags                        []string `json:"tags"`
+		ContentClassificationLabels []string `json:"content_classification_labels"`
+		IsBrandedContent            bool     `json:"is_branded_content"`
+	} `json:"data"`
+}
