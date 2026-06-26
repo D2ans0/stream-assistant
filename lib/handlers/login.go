@@ -55,7 +55,7 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 
 		}
 		http.SetCookie(w, &cookie)
-		fmt.Fprintf(w, "\nLogged in as %s", userName)
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 	} else {
 		http.Error(w,
 			fmt.Sprintf("%d: Unauthorized", http.StatusUnauthorized),

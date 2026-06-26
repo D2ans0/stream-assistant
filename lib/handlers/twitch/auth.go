@@ -96,10 +96,7 @@ func (a *App) OAuthCallbackHandler(w http.ResponseWriter, r *http.Request, logge
 	}); err != nil {
 		println(err.Error())
 	}
-	fmt.Fprintln(w, "Successfully authorized Stream Assistant!")
-	fmt.Fprintf(w, "Login: %s\n", twitchUser.UserName)
-	fmt.Fprintf(w, "UserID: %s\n", twitchUser.UserID)
-	fmt.Fprintf(w, "ClienID (ID of this application): %s\n", validatedToken.Client_id)
+	http.Redirect(w, r, "/dashboard", http.StatusTemporaryRedirect)
 	return twitchUser, nil
 }
 
