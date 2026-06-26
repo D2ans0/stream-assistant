@@ -86,6 +86,7 @@ func TwitchOAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 func GetUserChannels(w http.ResponseWriter, r *http.Request) {
 	err := errors.New("Empty Error")
+
 	if user := loggedInUser(r); user != nil {
 		con, err := db.OpenDB()
 		if err == nil {

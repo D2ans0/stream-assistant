@@ -60,17 +60,28 @@ function changeChannel(e) {
   player.setChannel(e.value);
   setCookie(ChannelCookieName, e.value, 365);
 }
-function populateChannelDropdown(dropdownID) {
-  // placeholder, need to add api call for getting a user's accessible channels
-  let data = [
-      "twitch",
-      "212th_attackbattalion"
-  ];
+async function populateChannelDropdown(dropdownID) {
+  const URL = "/user/GetUserChannels";
   var selectElement = document.getElementById(dropdownID);
-  console.log(selectElement.childNodes);
-  selectElement.innerHTML = '';
-  data.map(item => selectElement.appendChild(new Option(item, item)).cloneNode(true));
-  selectElement.value = SelectedChannel
+  try {
+    const request = new Request(URL);
+    const response = await fetch(request);
+    const text = await response.text();
+    const parsedJSON = JSON.parse(text);
+    selectElement.innerHTML = '';
+    Object.keys(parsedJSON).forEach(key => {
+      selectElement.appendChild(new Option(key, key)).cloneNode(true)
+    });
+    // If no cookie is present, select the first channel
+    if (SelectedChannel == 0) {
+      selectElement.value = selectElement[0].value
+    } else {
+      selectElement.value = SelectedChannel
+    }
+  } catch (e) {
+    console.error(e);
+    document.getElementById(NameFormInputFieldID).value = e;
+  }
 }
 
 function loadChannelEmbed(channelName) {
