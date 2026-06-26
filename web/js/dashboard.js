@@ -7,14 +7,35 @@ const TitleFormID = "streamTitleForm"
 const TitleFormInputFieldID = "streamTitle"
 const ChannelCookieName = "selectedChannel"
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-document.getElementById(NameFormID).addEventListener("submit", function (e) {
+document.getElementById(NameFormID).addEventListener("submit", async (e) => {
   e.preventDefault();
   getChannelID(e.target)
 });
 
-document.getElementById(TitleFormID).addEventListener("submit", function (e) {
+// Set stream title
+document.getElementById(TitleFormID).addEventListener("submit", async (e) => {
   e.preventDefault();
-  setStreamTitle(e)
+  const formData = new FormData();
+  const URL = "/twitch/setStreamTitle";
+  
+  formData.append("channel", SelectedChannel)
+  formData.append("title", document.getElementById(TitleFormInputFieldID).value)
+  try {
+    fetch(URL, {
+      method: "POST",
+      body: formData
+    })
+    .then(response => response.text())
+    .then(data => {
+      document.getElementById(NameFormInputFieldID).value = ""
+        document.getElementById(NameFormInputFieldID).placeholder = data;
+    })
+  } catch (e) {
+    console.error(e);
+    document.getElementById(NameFormInputFieldID).value = e;
+  }
+  console.log(e.value)
+
 });
 
 async function init() {
@@ -24,8 +45,8 @@ async function init() {
   }
   console.log(SelectedChannel);
   populateChannelDropdown(ChannelDropdownID);
-  loadChannelEmbed(SelectedChannel);
   getStreamTitle(TitleFormInputFieldID);
+  loadChannelEmbed(SelectedChannel);
 }
 
 async function rotateOnPress(e) {
@@ -57,9 +78,11 @@ async function getChannelID(form) {
 }
 
 function changeChannel(e) {
+  getStreamTitle(TitleFormInputFieldID)
   player.setChannel(e.value);
   setCookie(ChannelCookieName, e.value, 365);
 }
+
 async function populateChannelDropdown(dropdownID) {
   const URL = "/user/GetUserChannels";
   var selectElement = document.getElementById(dropdownID);
@@ -75,6 +98,7 @@ async function populateChannelDropdown(dropdownID) {
     // If no cookie is present, select the first channel
     if (SelectedChannel == 0) {
       selectElement.value = selectElement[0].value
+      SelectedChannel = selectElement[0].value // set cookie immediately
     } else {
       selectElement.value = SelectedChannel
     }
@@ -98,8 +122,15 @@ function loadChannelEmbed(channelName) {
 
 function getStreamTitle(fieldName) {
   e = document.getElementById(fieldName)
-  e.value = "PH - " + SelectedChannel + " - PH";
-}
-function setStreamTitle(e) {
-  console.log(e.value)
+  const URL = "/twitch/getStreamTitle";
+  try {
+    fetch(URL+"?channel="+SelectedChannel)
+    .then(response => response.text())
+    .then(data => {
+      e.value = data
+    })
+  } catch (e) {
+    console.error(e);
+    document.getElementById(NameFormInputFieldID).value = e;
+  }
 }

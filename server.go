@@ -40,6 +40,8 @@ func webServer() {
 	mux.HandleFunc("GET /user/GetUserChannels", logWrapperFunc(handlers.GetUserChannels))
 	mux.HandleFunc("GET /twitch/oauth", logWrapperFunc(handlers.TwitchOauth))
 	mux.HandleFunc("GET /twitch/callback", logWrapperFunc(handlers.TwitchOAuthCallback))
+	mux.HandleFunc("POST /twitch/setStreamTitle", logWrapperFunc(handlers.SetChannelStreamTitle))
+	mux.HandleFunc("GET /twitch/getStreamTitle", logWrapperFunc(handlers.GetChannelStreamTitle))
 	mux.HandleFunc("POST /twitch/getChannelID", logWrapperFunc(handlers.GetChannelIDByName))
 	port := ":3000"
 	fmt.Println("Server is running on port" + port)

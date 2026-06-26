@@ -18,6 +18,7 @@ var (
 	clientSecret string
 )
 
+// loads config on startup
 func init() {
 	if keyData, err := os.ReadFile(ConfigPath); err == nil {
 		if err := json.Unmarshal(keyData, &Config); err != nil {
@@ -26,6 +27,7 @@ func init() {
 	}
 }
 
+// Root handler, currently unused
 func Root(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	w.Header().Add("Content-Type", "text/html")
@@ -40,26 +42,58 @@ func Root(w http.ResponseWriter, r *http.Request) {
 			`)
 }
 
+// Serve dashboard
 func Dashboard(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "web/dashboard.html")
 }
 
+// Returns channel ID when passed a name
 func GetChannelIDByName(w http.ResponseWriter, r *http.Request) {
 	channelName := r.FormValue("channelName")
-	// token, _ := tw.GetAppBearerToken(clientID, clientSecret)
 	clientID = Config["ClientID"]
 	clientSecret = Config["ClientSecret"]
 	token, err := tw.GetAppBearerToken(clientID, clientSecret)
 	user, err := tw.GetChannelIDByName(clientID, token.AccessToken, channelName)
-	// TODO: make a proper handler for setting stream title
-	tw.SetStreamTitle("d2ans0", clientID, "this is a test")
 	if err != nil {
 		fmt.Fprintf(w, "%s", err.Error())
 	} else {
-		fmt.Fprintf(w, "%s", user.Data[0].ID)
+		fmt.Fprintf(w, "%s", *user)
 	}
 }
 
+// Needs to be passed a channel, and title form values, also JWT cookie needs to be set
+func SetChannelStreamTitle(w http.ResponseWriter, r *http.Request) {
+	if user := loggedInUser(r); user != nil {
+		if con, err := db.OpenDB(); err == nil {
+			channelName := r.FormValue("channel")
+			desiredTitle := r.FormValue("title")
+			if db.IsActionAllowedForUser(con, *user, channelName, db.User) {
+				log.Printf("%s requested title change to \"%s\"", *user, desiredTitle)
+				if err := tw.SetStreamTitle(channelName, Config["ClientID"], desiredTitle); err != nil {
+					fmt.Fprint(w, "Failed to change title")
+					log.Println(err.Error())
+				} else {
+					fmt.Fprint(w, "Title changed!")
+				}
+			}
+		}
+	}
+}
+
+func GetChannelStreamTitle(w http.ResponseWriter, r *http.Request) {
+	if user := loggedInUser(r); user != nil {
+		if channelName := r.URL.Query().Get("channel"); channelName != "" {
+			title, err := tw.GetStreamTitle(channelName, Config["ClientID"])
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
+			fmt.Fprint(w, *title)
+		}
+	}
+}
+
+// Handle beginning of oauth2 flow or redirect to login if not logged into the app
 func TwitchOauth(w http.ResponseWriter, r *http.Request) {
 	if loggedInUser(r) != nil {
 		oAuth2 := tw.GetConfig()
@@ -69,6 +103,7 @@ func TwitchOauth(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Handle callback from twitch, and add the token values to database
 func TwitchOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	if user := loggedInUser(r); user != nil {
 		oAuth2 := tw.GetConfig()
@@ -84,6 +119,7 @@ func TwitchOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Returns JSON with channels available to users and their access level to them
 func GetUserChannels(w http.ResponseWriter, r *http.Request) {
 	err := errors.New("Empty Error")
 
