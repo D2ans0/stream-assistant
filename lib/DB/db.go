@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/ncruces/go-sqlite3"
@@ -368,5 +369,17 @@ func UpdateTwitchUserAccessTokenByID(db *sql.DB, ID string, token string) error 
 		return err
 	} else {
 		return nil
+	}
+}
+
+func GetUserAccessibleChannels(db *sql.DB, appUserName string) (map[string]string, error) {
+	users := make(map[string]string)
+	if user, err := GetAppUserByName(db, appUserName); err != nil {
+		return nil, err
+	} else {
+		for key, val := range user.Channels {
+			users[key] = strconv.Itoa(int(val))
+		}
+		return users, nil
 	}
 }

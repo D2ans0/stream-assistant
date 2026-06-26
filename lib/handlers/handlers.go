@@ -4,7 +4,9 @@ import (
 	db "SA/lib/DB"
 	tw "SA/lib/handlers/twitch"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 )
@@ -80,4 +82,26 @@ func TwitchOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
 	}
+}
+
+func GetUserChannels(w http.ResponseWriter, r *http.Request) {
+	err := errors.New("Empty Error")
+	if user := loggedInUser(r); user != nil {
+		con, err := db.OpenDB()
+		if err == nil {
+			channelMap, err := db.GetUserAccessibleChannels(con, *user)
+			if err == nil {
+				jsonStr, err := json.Marshal(channelMap)
+				if err == nil {
+					w.Write(jsonStr)
+					return
+				}
+			}
+		}
+	} else {
+		http.Error(w, "401: Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	log.Printf("Failed to get user Channels:\n%s", err.Error())
+	http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 }
