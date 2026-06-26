@@ -33,14 +33,14 @@ func webServer() {
 	fs := http.FileServer(http.Dir("./web"))
 	mux := http.NewServeMux()
 	mux.Handle("/", logWrapperHandler(fs))
-	mux.HandleFunc("POST /twitch/getChannelID", logWrapperFunc(handlers.GetChannelIDByName))
-	mux.HandleFunc("GET /twitch/oauth", logWrapperFunc(handlers.TwitchOauth))
-	mux.HandleFunc("GET /twitch/callback", logWrapperFunc(handlers.TwitchOAuthCallback))
 	mux.HandleFunc("GET /login", logWrapperFunc(handlers.LoginGet))
 	mux.HandleFunc("POST /login", logWrapperFunc(handlers.LoginPost))
 	mux.HandleFunc("GET /logout", logWrapperFunc(handlers.Logout))
 	mux.HandleFunc("GET /dashboard", logWrapperFunc(handlers.Dashboard))
 	mux.HandleFunc("GET /user/GetUserChannels", logWrapperFunc(handlers.GetUserChannels))
+	mux.HandleFunc("GET /twitch/oauth", logWrapperFunc(handlers.TwitchOauth))
+	mux.HandleFunc("GET /twitch/callback", logWrapperFunc(handlers.TwitchOAuthCallback))
+	mux.HandleFunc("POST /twitch/getChannelID", logWrapperFunc(handlers.GetChannelIDByName))
 	port := ":3000"
 	fmt.Println("Server is running on port" + port)
 
@@ -61,6 +61,9 @@ func main() {
 	// 	PermLevel:  db.User,
 	// }
 	// db.ModifyAppUserChannel(con, "Stumpy", "Poppies", actions)
+	// actions.PermLevel = db.Owner
+	// db.ModifyAppUserChannel(con, "Stumpy", "d2ans0", actions)
+	// db.ModifyAppUserChannel(con, "Stumpy", "Poppies2", actions)
 	// actions.ActionType = db.Modify
 	// actions.PermLevel = db.Admin
 	// db.ModifyAppUserChannel(con, "Stumpy", "d2ans0", actions)

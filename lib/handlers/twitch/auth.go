@@ -97,9 +97,9 @@ func (a *App) OAuthCallbackHandler(w http.ResponseWriter, r *http.Request, logge
 		println(err.Error())
 	}
 	fmt.Fprintln(w, "Successfully authorized Stream Assistant!")
-	fmt.Fprintf(w, "Login: %s", twitchUser.UserName)
-	fmt.Fprintf(w, "UserID: %s", twitchUser.UserID)
-	fmt.Fprintf(w, "ClienID (ID of this application): %s", validatedToken.Client_id)
+	fmt.Fprintf(w, "Login: %s\n", twitchUser.UserName)
+	fmt.Fprintf(w, "UserID: %s\n", twitchUser.UserID)
+	fmt.Fprintf(w, "ClienID (ID of this application): %s\n", validatedToken.Client_id)
 	return twitchUser, nil
 }
 
@@ -119,7 +119,6 @@ func (a *App) OAuthValidate(token oauth2.Token) (UserAuth, error) {
 	}
 	validatedInfo := UserAuth{}
 	body, _ := io.ReadAll(res.Body)
-	// println(string(body))
 	if err := json.Unmarshal(body, &validatedInfo); err != nil {
 		return UserAuth{}, err
 	}
@@ -147,7 +146,6 @@ func (a *App) RefreshAccessTokenForUser(user *db.TwitchUser) error {
 	if con, err := db.OpenDB(); err != nil {
 		return err
 	} else {
-		println(newToken.AccessToken)
 		db.UpdateTwitchUserAccessTokenByID(con, user.UserID, newToken.AccessToken)
 		return nil
 	}
