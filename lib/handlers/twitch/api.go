@@ -70,8 +70,8 @@ func SetStreamTitle(channelName string, clientID string, title string) error {
 	}
 	reqBody, err := json.Marshal(broadcastProperties)
 	hc := http.Client{}
-	con, _ := db.OpenDB()
-	user, err := db.GetTwitchUserByName(con, channelName)
+	con := db.GetConnection()
+	user, err := con.GetTwitchUserByName(channelName)
 	if err != nil {
 		log.Println(err.Error())
 		return err
@@ -101,12 +101,12 @@ func SetStreamTitle(channelName string, clientID string, title string) error {
 
 func GetStreamTitle(channelName string, clientID string) (*string, error) {
 	var result ChannelInfo
-	con, _ := db.OpenDB()
+	con := db.GetConnection()
 	token, err := AccessTokenByName(channelName)
 	if err != nil {
 		return nil, err
 	}
-	channelID, err := db.TwitchNameToID(con, channelName)
+	channelID, err := con.TwitchNameToID(channelName)
 	if err != nil {
 		return nil, err
 	}

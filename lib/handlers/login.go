@@ -25,12 +25,8 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 	userName := r.FormValue("user")
 	userPass := r.FormValue("pass")
 	rememberMe := r.FormValue("remember")
-	con, err := db.OpenDB()
-	if err != nil {
-		println(err.Error())
-		return
-	}
-	userDB, err := db.GetAppUserByName(con, userName)
+	con := db.GetConnection()
+	userDB, err := con.GetAppUserByName(userName)
 	if err == nil && userDB.Pass == common.HashPassword(userPass, userDB.Salt) {
 		claims := jwt.MapClaims{
 			"ID":   25,
@@ -89,8 +85,8 @@ func loggedInUser(r *http.Request) *string {
 		return nil
 	}
 
-	con, err := db.OpenDB()
-	existingUser, _ := db.GetAppUserByName(con, name)
+	con := db.GetConnection()
+	existingUser, err := con.GetAppUserByName(name)
 	if err == nil && tokenValidity && existingUser.Name == name {
 		return &name
 	} else {

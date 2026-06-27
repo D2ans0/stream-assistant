@@ -44,7 +44,11 @@ func Root(w http.ResponseWriter, r *http.Request) {
 
 // Serve dashboard
 func Dashboard(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "web/dashboard.html")
+	if user := loggedInUser(r); user != nil {
+		http.ServeFile(w, r, "web/dashboard.html")
+	} else {
+		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+	}
 }
 
 // Returns channel ID when passed a name
@@ -64,17 +68,16 @@ func GetChannelIDByName(w http.ResponseWriter, r *http.Request) {
 // Needs to be passed a channel, and title form values, also JWT cookie needs to be set
 func SetChannelStreamTitle(w http.ResponseWriter, r *http.Request) {
 	if user := loggedInUser(r); user != nil {
-		if con, err := db.OpenDB(); err == nil {
-			channelName := r.FormValue("channel")
-			desiredTitle := r.FormValue("title")
-			if db.IsActionAllowedForUser(con, *user, channelName, db.User) {
-				log.Printf("%s requested title change to \"%s\"", *user, desiredTitle)
-				if err := tw.SetStreamTitle(channelName, Config["ClientID"], desiredTitle); err != nil {
-					fmt.Fprint(w, "Failed to change title")
-					log.Println(err.Error())
-				} else {
-					fmt.Fprint(w, "Title changed!")
-				}
+		con := db.GetConnection()
+		channelName := r.FormValue("channel")
+		desiredTitle := r.FormValue("title")
+		if con.IsActionAllowedForUser(*user, channelName, db.User) {
+			log.Printf("%s requested title change to \"%s\"", *user, desiredTitle)
+			if err := tw.SetStreamTitle(channelName, Config["ClientID"], desiredTitle); err != nil {
+				fmt.Fprint(w, "Failed to change title")
+				log.Println(err.Error())
+			} else {
+				fmt.Fprint(w, "Title changed!")
 			}
 		}
 	}
@@ -111,8 +114,8 @@ func TwitchOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
-			con, _ := db.OpenDB()
-			defer db.AddOrReplaceTwitchUser(con, user)
+			con := db.GetConnection()
+			defer con.AddOrReplaceTwitchUser(user)
 		}
 	} else {
 		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
@@ -124,15 +127,13 @@ func GetUserChannels(w http.ResponseWriter, r *http.Request) {
 	err := errors.New("Empty Error")
 
 	if user := loggedInUser(r); user != nil {
-		con, err := db.OpenDB()
+		con := db.GetConnection()
+		channelMap, err := con.GetUserAccessibleChannels(*user)
 		if err == nil {
-			channelMap, err := db.GetUserAccessibleChannels(con, *user)
+			jsonStr, err := json.Marshal(channelMap)
 			if err == nil {
-				jsonStr, err := json.Marshal(channelMap)
-				if err == nil {
-					w.Write(jsonStr)
-					return
-				}
+				w.Write(jsonStr)
+				return
 			}
 		}
 	} else {

@@ -89,8 +89,8 @@ func (a *App) OAuthCallbackHandler(w http.ResponseWriter, r *http.Request, logge
 		RefreshToken:      userToken.RefreshToken,
 		AccessTokenExpiry: userToken.Expiry.Unix(),
 	}
-	con, _ := db.OpenDB()
-	if err := db.ModifyAppUserChannel(con, loggedInUser, twitchUser.UserName, db.ChannelAction{
+	con := db.GetConnection()
+	if err := con.ModifyAppUserChannel(loggedInUser, twitchUser.UserName, db.ChannelAction{
 		ActionType: db.Add,
 		PermLevel:  db.Owner,
 	}); err != nil {
@@ -134,19 +134,16 @@ func (a *App) refreshToken(token *oauth2.Token) *oauth2.Token {
 }
 
 func (a *App) RefreshAccessTokenForUser(userName string) error {
-	if con, err := db.OpenDB(); err == nil {
-		if user, err := db.GetTwitchUserByName(con, userName); err == nil {
-			token := new(oauth2.Token)
-			token.AccessToken = user.AccessToken
-			token.RefreshToken = user.RefreshToken
-			token.Expiry = time.Unix(user.AccessTokenExpiry, 0)
-			token.TokenType = "Bearer"
-			newToken := a.refreshToken(token)
-			db.UpdateTwitchUserAccessTokenByID(con, user.UserID, newToken.AccessToken)
-			return nil
-		} else {
-			return err
-		}
+	con := db.GetConnection()
+	if user, err := con.GetTwitchUserByName(userName); err == nil {
+		token := new(oauth2.Token)
+		token.AccessToken = user.AccessToken
+		token.RefreshToken = user.RefreshToken
+		token.Expiry = time.Unix(user.AccessTokenExpiry, 0)
+		token.TokenType = "Bearer"
+		newToken := a.refreshToken(token)
+		con.UpdateTwitchUserAccessTokenByID(user.UserID, newToken.AccessToken)
+		return nil
 	} else {
 		return err
 	}
@@ -155,12 +152,9 @@ func (a *App) RefreshAccessTokenForUser(userName string) error {
 func AccessTokenByName(userName string) (*string, error) {
 	conf := GetConfig()
 	conf.RefreshAccessTokenForUser(userName)
-	if con, err := db.OpenDB(); err == nil {
-		if user, err := db.GetTwitchUserByName(con, userName); err == nil {
-			return &user.AccessToken, nil
-		} else {
-			return nil, err
-		}
+	con := db.GetConnection()
+	if user, err := con.GetTwitchUserByName(userName); err == nil {
+		return &user.AccessToken, nil
 	} else {
 		return nil, err
 	}

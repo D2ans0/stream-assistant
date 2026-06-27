@@ -52,12 +52,13 @@ func webServer() {
 // Create and setup everything
 func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	db.InitDatabase()
+	con := db.GetConnection()
+	con.InitDatabase()
 	common.InitJWT()
 }
 
 func main() {
-	con, _ := db.OpenDB()
+	con := db.GetConnection()
 	// actions := db.ChannelAction{
 	// 	ActionType: db.Add,
 	// 	PermLevel:  db.User,
@@ -72,20 +73,19 @@ func main() {
 	// actions.ActionType = db.Remove
 	// db.ModifyAppUserChannel(con, "Stumpy", "Poppies", actions)
 	// os.Exit(0)
-	// newAppUser := db.AppUser{
-	// 	Name:        "Stumpy",
-	// 	Pass:        "123",
-	// 	Permissions: db.Owner,
-	// 	Channels:    db.ChannelPerm{"Stumpy": 4},
-	// }
+	newAppUser := db.AppUser{
+		Name:        "Stumpy",
+		Pass:        "Somepass",
+		Permissions: db.Owner,
+		Channels:    db.ChannelPerm{},
+	}
 
-	// db.AddAppUser(con, newAppUser)
-	// app := tw.GetConfig()
-	// user, _ := db.GetTwitchUserByName(con, "d2ans0")
+	con.AddAppUser(newAppUser)
+	// user, _ := con.GetTwitchUserByName("d2ans0")
 	// app.RefreshAccessTokenForUser(user)
 	// os.Exit(1)
-	if user, err := db.GetAppUserByName(con, "Stumpy"); err != nil {
-		println(err.Error())
+	if user, err := con.GetAppUserByName("Stumpy"); err != nil {
+		log.Println(err.Error())
 		os.Exit(1)
 	} else {
 		log.Printf("Username: %s", user.Name)

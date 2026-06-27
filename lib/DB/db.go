@@ -61,18 +61,37 @@ type TwitchUser struct {
 	AccessTokenExpiry int64
 }
 
-func InitDatabase() {
+type StreamAssistantDB struct {
+	Con  *sql.DB
+	Path string
+}
+
+// Opens Database for the app
+func GetConnection() StreamAssistantDB {
+	var db StreamAssistantDB
+	db.Path = "./SA.db"
+
+	con, err := sql.Open("sqlite3", fmt.Sprintf("file:%s", db.Path))
+	db.Con = con
+
+	if err != nil {
+		log.Println("Failed to open DB")
+		log.Panic(err.Error())
+	}
+	return db
+}
+
+func (db *StreamAssistantDB) InitDatabase() {
 	var err error
 	var sqlQuery string
 	var row string
-	db, _ := OpenDB()
 
 	// Create table with app users
 	sqlQuery = fmt.Sprintf(`
 		SELECT name FROM sqlite_schema
 		WHERE type ='table' AND name 
 		NOT LIKE 'sqlite_' AND name = '%s';`, userTableName)
-	db.QueryRow(sqlQuery).Scan(&row)
+	db.Con.QueryRow(sqlQuery).Scan(&row)
 	if row != "" {
 		log.Printf("Table %s already exists, skipping...", userTableName)
 	} else {
@@ -84,7 +103,7 @@ func InitDatabase() {
 			PermsLevel INT,
 			Channels TEXT
 		);`, userTableName)
-		_, err = db.Exec(sqlQuery)
+		_, err = db.Con.Exec(sqlQuery)
 		if err != nil {
 			log.Println("Failed to create DB")
 			log.Println(err.Error())
@@ -98,7 +117,7 @@ func InitDatabase() {
 		SELECT name FROM sqlite_schema
 		WHERE type ='table' AND name 
 		NOT LIKE 'sqlite_' AND name = '%s';`, twitchTableName)
-	db.QueryRow(sqlQuery).Scan(&row)
+	db.Con.QueryRow(sqlQuery).Scan(&row)
 	if row != "" {
 		log.Printf("Table %s already exists, skipping...", twitchTableName)
 	} else {
@@ -110,7 +129,7 @@ func InitDatabase() {
 			RefreshToken TEXT,
 			AccessTokenExpiry Int64
 		);`, twitchTableName)
-		_, err = db.Exec(sqlQuery)
+		_, err = db.Con.Exec(sqlQuery)
 		if err != nil {
 			log.Println("Failed to create DB")
 			log.Println(err.Error())
@@ -118,25 +137,11 @@ func InitDatabase() {
 		}
 		log.Printf("Created table %s", twitchTableName)
 	}
-	db.Close()
-
-}
-
-// Opens Database for the app
-func OpenDB() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "file:SA.db")
-
-	if err != nil {
-		log.Println("Failed to open DB")
-		log.Println(err.Error())
-		return nil, err
-	}
-	return db, err
 }
 
 // Adds App user
-func AddAppUser(db *sql.DB, user AppUser) error {
-	existingUser, _ := GetAppUserByName(db, user.Name)
+func (db *StreamAssistantDB) AddAppUser(user AppUser) error {
+	existingUser, _ := db.GetAppUserByName(user.Name)
 	if cmp.Equal(existingUser.Name, user.Name) {
 		log.Printf("User %s in table %s already exists...", user.Name, userTableName)
 		return nil
@@ -152,7 +157,7 @@ func AddAppUser(db *sql.DB, user AppUser) error {
 		user.Permissions,
 		channelsJSON,
 	)
-	_, err := db.Exec(sqlQuery)
+	_, err := db.Con.Exec(sqlQuery)
 	if err != nil {
 		log.Println("Failed to create user")
 		log.Println(err.Error())
@@ -163,8 +168,8 @@ func AddAppUser(db *sql.DB, user AppUser) error {
 }
 
 // Adds Twitch User to the database
-func AddTwitchUser(db *sql.DB, user TwitchUser) error {
-	existingUser, _ := GetTwitchUserByID(db, user.UserID)
+func (db *StreamAssistantDB) AddTwitchUser(user TwitchUser) error {
+	existingUser, _ := db.GetTwitchUserByID(user.UserID)
 	if cmp.Equal(existingUser, user) {
 		log.Printf("User %s in table %s already exists...", user.UserName, twitchTableName)
 		return nil
@@ -177,7 +182,7 @@ func AddTwitchUser(db *sql.DB, user TwitchUser) error {
 		user.RefreshToken,
 		user.AccessTokenExpiry,
 	)
-	_, err := db.Exec(sqlQuery)
+	_, err := db.Con.Exec(sqlQuery)
 	if err != nil {
 		var sqlErr *sqlite3.Error
 		errors.As(err, &sqlErr)
@@ -192,14 +197,14 @@ func AddTwitchUser(db *sql.DB, user TwitchUser) error {
 	return nil
 }
 
-func AddOrReplaceTwitchUser(db *sql.DB, user TwitchUser) error {
-	err := AddTwitchUser(db, user)
+func (db *StreamAssistantDB) AddOrReplaceTwitchUser(user TwitchUser) error {
+	err := db.AddTwitchUser(user)
 	if err != nil {
 		var sqlErr *sqlite3.Error
 		errors.As(err, &sqlErr)
 		println(err.Error())
 		if sqlErr.ExtendedCode() == sqlite3.CONSTRAINT_PRIMARYKEY {
-			tx, err := db.Begin()
+			tx, err := db.Con.Begin()
 			if err != nil {
 				println(err.Error())
 				return err
@@ -226,9 +231,9 @@ func AddOrReplaceTwitchUser(db *sql.DB, user TwitchUser) error {
 }
 
 // Returns the App user by searching for the specified name
-func GetAppUserByName(db *sql.DB, userName string) (AppUser, error) {
+func (db *StreamAssistantDB) GetAppUserByName(userName string) (AppUser, error) {
 	sqlQuery := fmt.Sprintf("SELECT * FROM %s WHERE Name='%s'", userTableName, userName)
-	result := db.QueryRow(sqlQuery)
+	result := db.Con.QueryRow(sqlQuery)
 	u := AppUser{}
 	var rawChannelsJSON []byte
 	if err := result.Scan(
@@ -248,9 +253,9 @@ func GetAppUserByName(db *sql.DB, userName string) (AppUser, error) {
 }
 
 // Returns a map with what channels the user has access to
-func GetAppUserChannels(db *sql.DB, userName string) (ChannelPerm, error) {
+func (db *StreamAssistantDB) GetAppUserChannels(userName string) (ChannelPerm, error) {
 	sqlQuery := fmt.Sprintf("SELECT Channels FROM %s WHERE Name='%s'", userTableName, userName)
-	result := db.QueryRow(sqlQuery)
+	result := db.Con.QueryRow(sqlQuery)
 	var channels ChannelPerm
 	var rawChannelsJSON []byte
 	if err := result.Scan(&rawChannelsJSON); err != nil {
@@ -266,10 +271,10 @@ func GetAppUserChannels(db *sql.DB, userName string) (ChannelPerm, error) {
 	return channels, nil
 }
 
-func ModifyAppUserChannel(db *sql.DB, userName string, channelName string, action ChannelAction) error {
+func (db *StreamAssistantDB) ModifyAppUserChannel(userName string, channelName string, action ChannelAction) error {
 	var channelsJSON []byte
 	var err error
-	channels, err := GetUserAccessibleChannels(db, userName)
+	channels, err := db.GetUserAccessibleChannels(userName)
 	logMessage := "%s channel perms for %s to %s"
 	sqlQuery := "UPDATE %s SET %s = '%s' WHERE Name='%s'"
 
@@ -309,7 +314,7 @@ func ModifyAppUserChannel(db *sql.DB, userName string, channelName string, actio
 	if err != nil {
 		return err
 	}
-	_, err = db.Exec(sqlQuery)
+	_, err = db.Con.Exec(sqlQuery)
 	if err != nil {
 		return err
 	}
@@ -318,9 +323,9 @@ func ModifyAppUserChannel(db *sql.DB, userName string, channelName string, actio
 }
 
 // Returns the App user by searching for the specified name
-func GetTwitchUserByID(db *sql.DB, id string) (TwitchUser, error) {
+func (db *StreamAssistantDB) GetTwitchUserByID(id string) (TwitchUser, error) {
 	sqlQuery := fmt.Sprintf("SELECT * FROM %s WHERE UserID='%s'", twitchTableName, id)
-	result := db.QueryRow(sqlQuery)
+	result := db.Con.QueryRow(sqlQuery)
 	u := TwitchUser{}
 	if err := result.Scan(
 		&u.UserID,
@@ -334,9 +339,9 @@ func GetTwitchUserByID(db *sql.DB, id string) (TwitchUser, error) {
 	return u, nil
 }
 
-func GetTwitchUserByName(db *sql.DB, name string) (*TwitchUser, error) {
+func (db *StreamAssistantDB) GetTwitchUserByName(name string) (*TwitchUser, error) {
 	sqlQuery := fmt.Sprintf("SELECT * FROM %s WHERE UserName='%s'", twitchTableName, name)
-	result := db.QueryRow(sqlQuery)
+	result := db.Con.QueryRow(sqlQuery)
 	u := TwitchUser{}
 	if err := result.Scan(
 		&u.UserID,
@@ -350,27 +355,27 @@ func GetTwitchUserByName(db *sql.DB, name string) (*TwitchUser, error) {
 	return &u, nil
 }
 
-func TwitchNameToID(db *sql.DB, name string) (*string, error) {
-	if user, err := GetTwitchUserByName(db, name); err == nil {
+func (db *StreamAssistantDB) TwitchNameToID(name string) (*string, error) {
+	if user, err := db.GetTwitchUserByName(name); err == nil {
 		return &user.UserID, nil
 	} else {
 		return nil, err
 	}
 }
 
-func TwitchIDNameToName(db *sql.DB, ID string) (*string, error) {
-	if user, err := GetTwitchUserByID(db, ID); err == nil {
+func (db *StreamAssistantDB) TwitchIDNameToName(ID string) (*string, error) {
+	if user, err := db.GetTwitchUserByID(ID); err == nil {
 		return &user.UserName, nil
 	} else {
 		return nil, err
 	}
 }
 
-func UpdateTwitchUserAccessTokenByName(db *sql.DB, userName string, token string) error {
+func (db *StreamAssistantDB) UpdateTwitchUserAccessTokenByName(userName string, token string) error {
 	var err error
 	sqlQuery := "UPDATE %s SET %s = '%s' WHERE UserName='%s'"
 	sqlQuery = fmt.Sprintf(sqlQuery, twitchTableName, "AccessToken", token, userName)
-	_, err = db.Exec(sqlQuery)
+	_, err = db.Con.Exec(sqlQuery)
 	if err != nil {
 		return err
 	} else {
@@ -378,11 +383,11 @@ func UpdateTwitchUserAccessTokenByName(db *sql.DB, userName string, token string
 	}
 }
 
-func UpdateTwitchUserAccessTokenByID(db *sql.DB, ID string, token string) error {
+func (db *StreamAssistantDB) UpdateTwitchUserAccessTokenByID(ID string, token string) error {
 	var err error
 	sqlQuery := "UPDATE %s SET %s = '%s' WHERE UserID='%s'"
 	sqlQuery = fmt.Sprintf(sqlQuery, twitchTableName, "AccessToken", token, ID)
-	_, err = db.Exec(sqlQuery)
+	_, err = db.Con.Exec(sqlQuery)
 	if err != nil {
 		return err
 	} else {
@@ -390,16 +395,16 @@ func UpdateTwitchUserAccessTokenByID(db *sql.DB, ID string, token string) error 
 	}
 }
 
-func GetUserAccessibleChannels(db *sql.DB, appUserName string) (ChannelPerm, error) {
-	if user, err := GetAppUserByName(db, appUserName); err != nil {
+func (db *StreamAssistantDB) GetUserAccessibleChannels(appUserName string) (ChannelPerm, error) {
+	if user, err := db.GetAppUserByName(appUserName); err != nil {
 		return nil, err
 	} else {
 		return user.Channels, nil
 	}
 }
 
-func IsActionAllowedForUser(db *sql.DB, appUserName string, channelName string, neededAccessLevel PermLevel) bool {
-	if channelMap, err := GetUserAccessibleChannels(db, appUserName); err == nil {
+func (db *StreamAssistantDB) IsActionAllowedForUser(appUserName string, channelName string, neededAccessLevel PermLevel) bool {
+	if channelMap, err := db.GetUserAccessibleChannels(appUserName); err == nil {
 		if accessLevel, ok := channelMap[channelName]; ok {
 			if accessLevel >= neededAccessLevel {
 				return true
