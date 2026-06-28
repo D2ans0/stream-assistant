@@ -39,7 +39,7 @@ func Root(w http.ResponseWriter, r *http.Request) {
 				<input type="submit" value="Submit">
 			</form>
 			</body>
-			`)
+	`)
 }
 
 // Serve dashboard
@@ -69,6 +69,7 @@ func GetChannelIDByName(w http.ResponseWriter, r *http.Request) {
 func SetChannelStreamTitle(w http.ResponseWriter, r *http.Request) {
 	if user := loggedInUser(r); user != nil {
 		con := db.GetConnection()
+		defer con.Con.Close()
 		channelName := r.FormValue("channel")
 		desiredTitle := r.FormValue("title")
 		if con.IsActionAllowedForUser(*user, channelName, db.User) {
@@ -115,6 +116,7 @@ func TwitchOAuthCallback(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
 			con := db.GetConnection()
+			defer con.Con.Close()
 			defer con.AddOrReplaceTwitchUser(user)
 		}
 	} else {
@@ -128,6 +130,7 @@ func GetUserChannels(w http.ResponseWriter, r *http.Request) {
 
 	if user := loggedInUser(r); user != nil {
 		con := db.GetConnection()
+		defer con.Con.Close()
 		channelMap, err := con.GetUserAccessibleChannels(*user)
 		if err == nil {
 			jsonStr, err := json.Marshal(channelMap)

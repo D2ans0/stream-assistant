@@ -53,6 +53,7 @@ func webServer() {
 func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	con := db.GetConnection()
+	defer con.Con.Close()
 	con.InitDatabase()
 	common.InitJWT()
 }

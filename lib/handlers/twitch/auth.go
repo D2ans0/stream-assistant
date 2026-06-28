@@ -90,6 +90,7 @@ func (a *App) OAuthCallbackHandler(w http.ResponseWriter, r *http.Request, logge
 		AccessTokenExpiry: userToken.Expiry.Unix(),
 	}
 	con := db.GetConnection()
+	defer con.Con.Close()
 	if err := con.ModifyAppUserChannel(loggedInUser, twitchUser.UserName, db.ChannelAction{
 		ActionType: db.Add,
 		PermLevel:  db.Owner,
@@ -135,6 +136,7 @@ func (a *App) refreshToken(token *oauth2.Token) *oauth2.Token {
 
 func (a *App) RefreshAccessTokenForUser(userName string) error {
 	con := db.GetConnection()
+	defer con.Con.Close()
 	if user, err := con.GetTwitchUserByName(userName); err == nil {
 		token := new(oauth2.Token)
 		token.AccessToken = user.AccessToken
@@ -153,6 +155,7 @@ func AccessTokenByName(userName string) (*string, error) {
 	conf := GetConfig()
 	conf.RefreshAccessTokenForUser(userName)
 	con := db.GetConnection()
+	defer con.Con.Close()
 	if user, err := con.GetTwitchUserByName(userName); err == nil {
 		return &user.AccessToken, nil
 	} else {

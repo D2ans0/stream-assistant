@@ -69,6 +69,5 @@ func ParseJWT(signedJWT string) (claims jwt.MapClaims, valid bool) {
 		return nil, false
 	}
 	claims = token.Claims.(jwt.MapClaims)
-	// fmt.Printf("claims: %v\n", claims["Name"])
 	return claims, true
 }
