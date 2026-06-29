@@ -1,6 +1,7 @@
 var player;
 var SelectedChannel
 const ChannelDropdownID = "channelDropdown"
+const ChannelDropdownPopoverID = "channelList"
 const NameFormID = "channelNameForm"
 const NameFormInputFieldID = "channelName"
 const TitleFormID = "streamTitleForm"
@@ -78,13 +79,17 @@ async function getChannelID(form) {
 }
 
 function changeChannel(e) {
-  getStreamTitle(TitleFormInputFieldID)
-  player.setChannel(e.value);
-  setCookie(ChannelCookieName, e.value, 365);
+  console.log(e.innerText);
+  document.getElementById(ChannelDropdownPopoverID).hidePopover()
+  document.getElementById(ChannelDropdownID).innerText = e.innerText
+  getStreamTitle(TitleFormInputFieldID);
+  player.setChannel(e.innerText);
+  setCookie(ChannelCookieName, e.innerText, 365);
 }
 
 async function populateChannelDropdown(dropdownID) {
   const URL = "/user/GetUserChannels";
+  const ul = document.getElementById(ChannelDropdownPopoverID)
   var selectElement = document.getElementById(dropdownID);
   try {
     const request = new Request(URL);
@@ -93,18 +98,26 @@ async function populateChannelDropdown(dropdownID) {
     const parsedJSON = JSON.parse(text);
     selectElement.innerHTML = '';
     Object.keys(parsedJSON).forEach(key => {
-      selectElement.appendChild(new Option(key, key)).cloneNode(true)
+      const newLi = document.createElement("li");
+      let text = document.createTextNode(key);
+      newLi.appendChild(text);
+      newLi.onclick = function() { changeChannel(this) }
+      ul.appendChild(newLi);
     });
+
+
     // If no cookie is present, select the first channel
     if (SelectedChannel == 0) {
-      selectElement.value = selectElement[0].value
+      selectElement.value = ul.children[0].innerText
+      selectElement.innerText = ul.children[0].innerText
       changeChannel(selectElement)
     } else {
+      selectElement.innerText = SelectedChannel
       selectElement.value = SelectedChannel
     }
   } catch (e) {
     console.error(e);
-    document.getElementById(NameFormInputFieldID).value = e;
+    document.getElementById(NameFormInputFieldID).innerText = e;
   }
 }
 

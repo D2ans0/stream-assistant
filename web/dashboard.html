@@ -6,15 +6,18 @@
     <link href="fonts/fontawesome/fontawesome.css" rel="stylesheet" />
     <link href="fonts/fontawesome/solid.css" rel="stylesheet" />
     <link href="fonts/fontawesome/v5-font-face.css" rel="stylesheet" />
-    <link href="css/common.css" rel="stylesheet" />
     <link href="css/dashboard.css" rel="stylesheet" />
+    <link href="css/common.css" rel="stylesheet" />
   </head>
 
   <body onload="init()">
     <button id="reload" title="Reload info on page" onclick="init(); rotateOnPress(this)"><i class="fa-solid fa-arrow-rotate-right"></i></button>
     <div id="mainContainer">
     <div class="select-wrapper">
-      <select id="channelDropdown" onchange="changeChannel(this)" class="custom-select"></select>
+      <button id="channelDropdown" popovertarget="channelList" class="custom-select">Channel Name</button>
+      <ul popover id="channelList" class="custom-select-list">
+        <!-- gets populated from JS -->
+      </ul>
     </div>
       <div id="twitch-embed"></div>
       <form id="streamTitleForm">
