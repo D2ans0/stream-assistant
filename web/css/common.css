@@ -220,10 +220,8 @@ input[type="password"] {
   aspect-ratio: 1;
   background: none;
   text-shadow: 0 0 0.2rem var(--white-shadow-color);
-  /* top: 0.25rem; */
   right: 0.5rem;
   &:hover {
     text-shadow: 0 0 0.1rem var(--text-color);
   }
-  /* margin-right: 0.5rem; */
 }
