@@ -12,6 +12,7 @@ import (
 )
 
 const authCookieName = "Auth"
+const userCookieName = "User"
 
 func LoginGet(w http.ResponseWriter, r *http.Request) {
 	if loggedInUser(r) != nil {
@@ -30,7 +31,7 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 	userDB, err := con.GetAppUserByName(userName)
 	if err == nil && userDB.Pass == common.HashPassword(userPass, userDB.Salt) {
 		claims := jwt.MapClaims{
-			"Name":            userName,
+			"Name":            userDB.Name,
 			"PermissionLevel": userDB.Permissions,
 		}
 		jwt, err := common.SignedJWT(claims)
@@ -38,7 +39,7 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 			log.Println(err.Error())
 			return
 		}
-		cookie := http.Cookie{
+		cookieAuth := http.Cookie{
 			Name:     authCookieName,
 			Value:    jwt,
 			Path:     "/",
@@ -46,11 +47,23 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 			Secure:   false,
 			SameSite: http.SameSiteLaxMode,
 		}
+		// intended to be used from JS.
+		// Server will still check against cookieAuth instead
+		cookieUser := http.Cookie{
+			Name:     userCookieName,
+			Value:    fmt.Sprintf("%s:%d", userDB.Name, userDB.Permissions),
+			Path:     "/",
+			HttpOnly: false,
+			Secure:   false,
+			SameSite: http.SameSiteLaxMode,
+		}
 		if rememberMe == "on" {
-			cookie.Expires = time.Now().Add(time.Hour * 365 * 24)
+			cookieUser.Expires = time.Now().Add(time.Hour * 365 * 24)
+			cookieAuth.Expires = time.Now().Add(time.Hour * 365 * 24)
 
 		}
-		http.SetCookie(w, &cookie)
+		http.SetCookie(w, &cookieUser)
+		http.SetCookie(w, &cookieAuth)
 		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 	} else {
 		http.Error(w,
@@ -61,14 +74,18 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
-	existingCookie, err := r.Cookie(authCookieName)
-	if err != nil {
-		println(err.Error())
-		return
+	existingAuthCookie, err := r.Cookie(authCookieName)
+	if err == nil {
+		existingAuthCookie.Value = ""
+		existingAuthCookie.Expires = time.Unix(0, 0)
+		http.SetCookie(w, existingAuthCookie)
 	}
-	existingCookie.Value = ""
-	existingCookie.Expires = time.Unix(0, 0)
-	http.SetCookie(w, existingCookie)
+	existingUserCookie, err := r.Cookie(userCookieName)
+	if err == nil {
+		existingUserCookie.Value = ""
+		existingUserCookie.Expires = time.Unix(0, 0)
+		http.SetCookie(w, existingUserCookie)
+	}
 	http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
 }
 
