@@ -30,8 +30,8 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 	userDB, err := con.GetAppUserByName(userName)
 	if err == nil && userDB.Pass == common.HashPassword(userPass, userDB.Salt) {
 		claims := jwt.MapClaims{
-			"ID":   25,
-			"Name": "Stumpy",
+			"Name":            userName,
+			"PermissionLevel": userDB.Permissions,
 		}
 		jwt, err := common.SignedJWT(claims)
 		if err != nil {
@@ -42,7 +42,6 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 			Name:     authCookieName,
 			Value:    jwt,
 			Path:     "/",
-			Expires:  time.Now().Add(600 * time.Second),
 			HttpOnly: true,
 			Secure:   false,
 			SameSite: http.SameSiteLaxMode,
