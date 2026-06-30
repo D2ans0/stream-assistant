@@ -1,17 +1,18 @@
 var player;
-var SelectedChannel
-const ChannelDropdownID = "channelDropdown"
-const ChannelDropdownPopoverID = "channelList"
-const NameFormID = "channelNameForm"
-const NameFormInputFieldID = "channelName"
-const TitleFormID = "streamTitleForm"
-const TitleFormInputFieldID = "streamTitle"
-const ChannelCookieName = "selectedChannel"
+var SelectedChannel;
+var Username;
+var PermissionsLevel;
+var formObj;
+var activeMessages = 0;
+
+const ChannelCookieName = "selectedChannel";
+const UserCookieName = "User"
+const ChannelDropdownID = "channelDropdown";
+const ChannelDropdownPopoverID = "channelList";
+const TitleFormID = "streamTitleForm";
+const TitleFormInputFieldID = "streamTitle";
+const UserMenuID = "userMenu";
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-document.getElementById(NameFormID).addEventListener("submit", async (e) => {
-  e.preventDefault();
-  getChannelID(e.target)
-});
 
 // Set stream title
 document.getElementById(TitleFormID).addEventListener("submit", async (e) => {
@@ -28,12 +29,11 @@ document.getElementById(TitleFormID).addEventListener("submit", async (e) => {
     })
     .then(response => response.text())
     .then(data => {
-      document.getElementById(NameFormInputFieldID).value = ""
-        document.getElementById(NameFormInputFieldID).placeholder = data;
+      displayMessage(data, false)
     })
   } catch (e) {
     console.error(e);
-    document.getElementById(NameFormInputFieldID).value = e;
+    displayMessage(e, true)
   }
   console.log(e.value)
 
@@ -48,6 +48,9 @@ async function init() {
   populateChannelDropdown(ChannelDropdownID);
   getStreamTitle(TitleFormInputFieldID);
   loadChannelEmbed(SelectedChannel);
+  UserName = getCookie("User").split(':')[0];
+  PermissionsLevel = getCookie("User").split(':')[1];
+  setUsername(UserMenuID);
 }
 
 async function rotateOnPress(e) {
@@ -57,25 +60,6 @@ async function rotateOnPress(e) {
   e.classList.add("rotate");
   await delay(1000);
   e.classList.remove("rotate");
-}
-
-async function getChannelID(form) {
-  const URL = "/twitch/getChannelID";
-  var formData = new FormData(form);
-  try {
-    fetch(URL, {
-      method: "POST",
-      body: formData
-    })
-    .then(response => response.text())
-    .then(data => {
-      document.getElementById(NameFormInputFieldID).value = ""
-        document.getElementById(NameFormInputFieldID).placeholder = data;
-    })
-  } catch (e) {
-    console.error(e);
-    document.getElementById(NameFormInputFieldID).value = e;
-  }
 }
 
 function changeChannel(e) {
@@ -97,6 +81,7 @@ async function populateChannelDropdown(dropdownID) {
     const text = await response.text();
     const parsedJSON = JSON.parse(text);
     selectElement.innerHTML = '';
+    ul.textContent = ""
     Object.keys(parsedJSON).forEach(key => {
       const newLi = document.createElement("li");
       let text = document.createTextNode(key);
@@ -117,7 +102,7 @@ async function populateChannelDropdown(dropdownID) {
     }
   } catch (e) {
     console.error(e);
-    document.getElementById(NameFormInputFieldID).innerText = e;
+    displayMessage(e, true)
   }
 }
 
@@ -145,6 +130,64 @@ function getStreamTitle(fieldName) {
   } catch (e) {
     console.error("getStreamTitleError");
     console.error(e);
-    document.getElementById(NameFormInputFieldID).value = e;
+    displayMessage(e, true)
+  }
+}
+
+function setUsername(fieldName) {
+  e = document.getElementById(fieldName);
+  e.getElementsByTagName("label")[0].innerText = UserName;
+}
+
+function changePassword(e) {
+  formObj = e;
+  console.log("Start")
+  if (!(e.newPassword.value == e.newPasswordRepeat.value)) {
+    displayMessage("Passwords don't match!", true)
+    return false
+  } else {
+    displayMessage("Passwords match!", false)
+    console.log("Passwords match!")
+    return true
+    const formData = new FormData();
+    const URL = "/twitch/setStreamTitle";
+    
+    formData.append("user", Username)
+    formData.append("oldPassword", e.oldPassword.value)
+    formData.append("newPassword", e.newPassword.value)
+    try {
+      fetch(URL, {
+        method: "POST",
+        body: formData
+      })
+      .then(response => response.text())
+      .then(data => {
+        displayMessage(e, false)
+      })
+    } catch (e) {
+      console.error(e);
+      displayMessage(e, true)
+    }
+  }
+}
+
+async function displayMessage(message, isError) {
+  container = document.getElementById("messageList")
+  container.showPopover();
+  activeMessages += 1;
+  let e = document.createElement("div");
+  let text = document.createTextNode(message);
+  e.appendChild(text);
+  if (isError) {
+    e.classList.add("errorMessage");
+  }
+  document.getElementById("messageList").prepend(e);
+  await delay(4000 + 1000*activeMessages); // add delay if there's messages already
+  e.style.transform = "translateY(-1000px)";
+  await delay(1000);
+  e.remove();
+  activeMessages -= 1;
+  if (activeMessages == 0) {
+    container.hidePopover()
   }
 }

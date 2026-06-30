@@ -8,16 +8,25 @@ div#mainContainer {
   gap: 0.5rem;
 }
 
-button#reload {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
+nav {
+  display: flex;
+  padding: 2vh 0.5vw;
+  margin-bottom: 2vh;
+  background-color: color-mix(in srgb, var(--background-color), #000 30%);
+  & > :first-child {
+    margin-left: 1.5vw;
+  }
+  & > :last-child {
+    margin-right: 1.5vw;
+  }
+}
+
+button#reload, button#user {
   background: none;
-  border-radius: 50%;
   height: 2rem;
   width: 2rem;
   transition: 0.1s all;
-  padding: 0;
+  cursor: pointer;
   outline: none;
   &:hover {
     box-shadow: inset 0 0 0.5rem var(--highlight-color);
@@ -27,7 +36,7 @@ button#reload {
   }
   &:active {
     box-shadow: inset 0 0 0.5rem rgba(var(--shadow-color),var(--shadow-opacity-medium));
-    transform:scale(0.95);
+    /* transform:scale(0.95); */
     i {
       text-shadow: 0 0 0.25rem var(--text-color);
       filter: brightness(1.2);
@@ -41,6 +50,89 @@ button#reload {
     position: relative;
     pointer-events: none;
     font-size:1rem;
+  }
+}
+
+button#user {
+  anchor-name: --user-button;
+}
+
+#userMenu {
+  position-anchor: --user-button;
+  padding: 0;
+  flex-direction: column;
+  inset: auto;
+  top: anchor(bottom);
+  left: anchor(right);
+  translate: -0.25rem 0.1rem;
+  color: var(--text-color);
+  border: 2px solid var(--highlight-color);
+  border-radius: 10px;
+  background-color: color-mix(in srgb, var(--background-color), transparent 30%, #fff 10%);
+  backdrop-filter: blur(var(--blur-strength));
+  text-align: center;
+  &:popover-open {
+    display: flex;
+  }
+  label {
+    /* padding-bottom: 0.1rem; */
+    border-bottom: 2px solid var(--highlight-color);
+    font-weight: 800;
+  }
+  & > * {
+    font-size: 0.75rem;
+    place-items: center;
+    padding: 0.25rem 2vw;
+    border: none;
+    border-bottom: 2px solid var(--text-color);
+  }
+  & > button, & > div {
+    font-weight: normal;
+    /* cursor: pointer; */
+    background: none;
+    border-radius: 0;
+    &:hover {
+      background-color: color-mix(in srgb, var(--background-color), #fff 30%);
+    }
+  }
+  & > :last-child {
+    border-bottom: none;
+  }
+}
+
+#changePasswordDialog {
+  background: none;
+  color: var(--text-color);
+  border-radius: 15px;
+  border: 3px solid var(--highlight-color);
+  padding: 1vh 3vw 1vh 3vw;
+  background-color: color-mix(in srgb, var(--background-color), transparent 30%, #fff 10%);
+  backdrop-filter: blur(var(--blur-strength));
+  top: -10vh;
+  &:popover-open {
+    display: flex;
+    flex-direction: column;
+  }
+  * {
+    text-align: center;
+    display: block;
+    margin: 5px auto;
+    font-size: 0.75rem;
+  }
+
+  & form > :last-child {
+    margin-top: 2vh;
+    display: flex;
+    button {
+      display: inline-block;
+      flex-grow: 1;
+      max-width: 40%;
+    }
+  }
+  &::backdrop {
+    backdrop-filter: blur(var(--blur-strength));
+    pointer-events: all;
+    display: block;
   }
 }
 
@@ -59,8 +151,8 @@ button#reload {
 }
 
 #twitch-embed {
-  height: 400px;
-  width: 60vw;
+  height: 40vh;
+  aspect-ratio: 16 / 9;
 }
 
 .text-form-wrapper {
@@ -144,13 +236,13 @@ button#reload {
 }
 .custom-select-list {
   display: none;
-  position-anchor: --channel-button;
   position: absolute;
-  color: var(--text-color);
-  background-color: color-mix(in srgb, var(--background-color), transparent 30%);
   inset: auto;
+  position-anchor: --channel-button;
   top: anchor(bottom);
   left: anchor(center);
+  color: var(--text-color);
+  background-color: color-mix(in srgb, var(--background-color), transparent 30%);
   translate: -50%;
   padding: 0;
   width: calc(anchor-size(width) - 0.8rem);
@@ -160,9 +252,9 @@ button#reload {
   transform: scaleY(1);
   transform-origin: top;
   transition: transform ease-in 0.2s;
-  backdrop-filter: blur(30px);
+  backdrop-filter: blur(var(--blur-strength));
   li {
-    padding: 0.2rem 0 0.2rem 0;
+    padding: 0.2rem 0;
     display: block;
     border-top: 1px solid var(--text-color);
     font-weight: normal;
@@ -184,6 +276,3 @@ button#reload {
     transform: scaleY(0);
   }
 }
-/*
-
-} */

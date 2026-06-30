@@ -11,14 +11,17 @@
   </head>
 
   <body onload="init()">
-    <button id="reload" title="Reload info on page" onclick="init(); rotateOnPress(this)"><i class="fa-solid fa-arrow-rotate-right"></i></button>
+    <nav>
+      <button id="user" popovertarget="userMenu"><i class="fa-solid fa-user"></i></button>
+      <div class="select-wrapper">
+        <button id="channelDropdown" popovertarget="channelList" class="custom-select">Channel Name</button>
+        <ul popover id="channelList" class="custom-select-list">
+          <!-- gets populated from JS -->
+        </ul>
+      </div>
+      <button id="reload" title="Reload info on page" onclick="init(); rotateOnPress(this)"><i class="fa-solid fa-arrow-rotate-right"></i></button>
+    </nav>
     <div id="mainContainer">
-    <div class="select-wrapper">
-      <button id="channelDropdown" popovertarget="channelList" class="custom-select">Channel Name</button>
-      <ul popover id="channelList" class="custom-select-list">
-        <!-- gets populated from JS -->
-      </ul>
-    </div>
       <div id="twitch-embed"></div>
       <form id="streamTitleForm">
         <label for="streamTitle">Stream title<br></label>
@@ -27,15 +30,33 @@
           <input type="submit" value="Set">
         </span>
       </form>
-
-      <form id="channelNameForm">
-        <label for="channelName">Channel ID from name<br></label>
-        <span class="text-form-wrapper">
-          <input type="text" id="channelName" name="channelName">
-          <input type="submit" value="Get">
+    
+    </div>
+    <div popover="auto" id="userMenu">
+      <label>Username</label>
+      <button popovertarget="registerNewUser">Register New User</button>
+      <button onclick="changePasswordDialog.showModal()">Change Password</button>
+      <button onclick="location.href='/logout'">Log out</button>
+    </div>
+    <dialog popover="manual" id="changePasswordDialog">
+      Password change form:
+      <form action="javascript:;" onsubmit="changePassword(this)" method="post">
+        <label for="pass">Old Password</label>
+        <input id="oldPassword" name="pass" type="password" required>
+        <label for="newPass">New Password</label>
+        <input id="newPassword" name="passRepeat" type="password" required>
+        <label for="newPassRepeat">Repeat New Password</label>
+        <input id="newPasswordRepeat" name="newPassRepeat" type="password" required>
+        <span>
+          <button id="changePasswordSubmit" type="submit">Submit</button>
+          <button type="reset" onclick="changePasswordDialog.close()" >Cancel</button>
         </span>
       </form>
-    
+    </dialog>
+    <div popover="manual" id="messageList">
+      <!-- <div>This is a test error</div>
+      <div>This is a second error</div>
+      <div>This is a third error</div> -->
     </div>
     <script src="https://player.twitch.tv/js/embed/v1.js"></script>
     <script src="js/common.js"></script>
