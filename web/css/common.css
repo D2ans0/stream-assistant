@@ -42,15 +42,18 @@ h2.AB212 {
 span.spacer {
   margin: .5rem 0;
 }
+
 footer {
   position: fixed;
-  bottom: 0;
+  bottom: 2vh;
   left: 0;
   width: 100%;
   text-align: center;
-}
-footer:p {
   margin: auto
+}
+
+label {
+  font-weight: bold;
 }
 
 input {
@@ -58,6 +61,8 @@ input {
   padding: 0.2rem;
   border-radius: 10px;
   text-align: center;
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
 button {
@@ -140,6 +145,9 @@ input[type="text"] {
   outline: none;
   &:focus {
     box-shadow: 0 0 0.5rem rgba(var(--white-shadow-color), var(--shadow-opacity-medium));
+  }
+  &::after {
+    content: "test"
   }
 }
 

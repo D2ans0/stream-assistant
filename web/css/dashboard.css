@@ -157,31 +157,25 @@ button#reload {
   border: 2px solid var(--highlight-color);
   border-top: 0;
   border-radius: 0 0 10px 10px;
-  height: auto;
   transform: scaleY(1);
   transform-origin: top;
   transition: transform ease-in 0.2s;
   backdrop-filter: blur(30px);
-  
-  /* ul { */
-    padding: 0;
-    margin: 0;
-    li {
-      padding: 0.2rem 0 0.2rem 0;
-      display: block;
-      border-top: 1px solid var(--text-color);
-      font-weight: normal;
-      &:first-child {
-        border-top: 0;
-      }
-      &:hover {
-        font-weight: 600;
-        background-color: var(--highlight-color);
-        color: var(--alt-text-color);
-        cursor: pointer;
-      }
+  li {
+    padding: 0.2rem 0 0.2rem 0;
+    display: block;
+    border-top: 1px solid var(--text-color);
+    font-weight: normal;
+    &:first-child {
+      border-top: 0;
     }
-  /* } */
+    &:hover {
+      font-weight: 600;
+      background-color: var(--highlight-color);
+      color: var(--alt-text-color);
+      cursor: pointer;
+    }
+  }
   &:popover-open { 
     display: flex;
     flex-direction: column;
