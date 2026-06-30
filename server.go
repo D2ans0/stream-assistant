@@ -38,6 +38,7 @@ func webServer() {
 	mux.HandleFunc("GET /logout", logWrapperFunc(handlers.Logout))
 	mux.HandleFunc("GET /dashboard", logWrapperFunc(handlers.Dashboard))
 	mux.HandleFunc("GET /user/GetUserChannels", logWrapperFunc(handlers.GetUserChannels))
+	mux.HandleFunc("POST /user/changePassword", logWrapperFunc(handlers.ChangePassword))
 	mux.HandleFunc("GET /twitch/oauth", logWrapperFunc(handlers.TwitchOauth))
 	mux.HandleFunc("GET /twitch/callback", logWrapperFunc(handlers.TwitchOAuthCallback))
 	mux.HandleFunc("POST /twitch/setStreamTitle", logWrapperFunc(handlers.SetChannelStreamTitle))

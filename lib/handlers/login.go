@@ -111,3 +111,21 @@ func loggedInUser(r *http.Request) *string {
 		return nil
 	}
 }
+
+func ChangePassword(w http.ResponseWriter, r *http.Request) {
+	userName := r.FormValue("user")
+	userPass := r.FormValue("pass")
+	userNewPass := r.FormValue("newPass")
+	con := db.GetConnection()
+	defer con.Con.Close()
+	if loggedInUser(r) != nil {
+		if err := con.UpdateAppUserPassword(userName, userPass, userNewPass); err != nil {
+			http.Error(w,
+				fmt.Sprintf("%s", err.Error()),
+				http.StatusInternalServerError,
+			)
+		} else {
+			fmt.Fprintf(w, "Password changed!")
+		}
+	}
+}

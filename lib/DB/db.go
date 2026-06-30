@@ -413,3 +413,27 @@ func (db *StreamAssistantDB) IsActionAllowedForUser(appUserName string, channelN
 	}
 	return false
 }
+
+func (db *StreamAssistantDB) UpdateAppUserPassword(userName string, oldPass string, newPass string) error {
+	var err error
+	user, err := db.GetAppUserByName(userName)
+	sqlQuery := "UPDATE %s SET %s = '%s' WHERE Name='%s'"
+	if err == nil && user.Pass == common.HashPassword(oldPass, user.Salt) {
+		newSalt := common.GenerateSalt()
+		newPassHash := common.HashPassword(newPass, newSalt)
+		passSQLQuery := fmt.Sprintf(sqlQuery, userTableName, "Pass", newPassHash, userName)
+		saltSQLQuery := fmt.Sprintf(sqlQuery, userTableName, "Salt", newSalt, userName)
+		db.Con.Exec(passSQLQuery)
+		if _, err = db.Con.Exec(passSQLQuery); err != nil {
+			log.Println(err.Error())
+			return errors.New("Database error")
+		}
+		if _, err = db.Con.Exec(saltSQLQuery); err != nil {
+			log.Println(err.Error())
+			return errors.New("Database error")
+		}
+	} else {
+		return errors.New("User does not exist or password is incorrect")
+	}
+	return nil
+}
