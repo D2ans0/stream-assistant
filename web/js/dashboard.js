@@ -12,6 +12,8 @@ const ChannelDropdownPopoverID = "channelList";
 const TitleFormID = "streamTitleForm";
 const TitleFormInputFieldID = "streamTitle";
 const UserMenuID = "userMenu";
+const messageListID = "messageList"
+const errorMessageClass = "errorMessage"
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Set stream title
@@ -35,8 +37,6 @@ document.getElementById(TitleFormID).addEventListener("submit", async (e) => {
     console.error(e);
     displayMessage(e, true)
   }
-  console.log(e.value)
-
 });
 
 async function init() {
@@ -48,7 +48,7 @@ async function init() {
   populateChannelDropdown(ChannelDropdownID);
   getStreamTitle(TitleFormInputFieldID);
   loadChannelEmbed(SelectedChannel);
-  UserName = getCookie("User").split(':')[0];
+  Username = getCookie("User").split(':')[0];
   PermissionsLevel = getCookie("User").split(':')[1];
   setUsername(UserMenuID);
 }
@@ -63,7 +63,6 @@ async function rotateOnPress(e) {
 }
 
 function changeChannel(e) {
-  console.log(e.innerText);
   document.getElementById(ChannelDropdownPopoverID).hidePopover()
   document.getElementById(ChannelDropdownID).innerText = e.innerText
   getStreamTitle(TitleFormInputFieldID);
@@ -119,13 +118,14 @@ function loadChannelEmbed(channelName) {
 }
 
 function getStreamTitle(fieldName) {
-  e = document.getElementById(fieldName)
+  const e = document.getElementById(fieldName)
   const URL = "/twitch/getStreamTitle";
   try {
     fetch(URL+"?channel="+SelectedChannel)
     .then(response => response.text())
     .then(data => {
       e.value = data
+      console.log(e)
     })
   } catch (e) {
     console.error("getStreamTitleError");
@@ -135,34 +135,38 @@ function getStreamTitle(fieldName) {
 }
 
 function setUsername(fieldName) {
-  e = document.getElementById(fieldName);
-  e.getElementsByTagName("label")[0].innerText = UserName;
+  const e = document.getElementById(fieldName);
+  e.getElementsByTagName("label")[0].innerText = Username;
 }
 
 function changePassword(e) {
-  formObj = e;
-  console.log("Start")
   if (!(e.newPassword.value == e.newPasswordRepeat.value)) {
     displayMessage("Passwords don't match!", true)
     return false
   } else {
-    displayMessage("Passwords match!", false)
-    console.log("Passwords match!")
-    return true
     const formData = new FormData();
-    const URL = "/twitch/setStreamTitle";
+    const URL = "/user/changePassword";
     
     formData.append("user", Username)
-    formData.append("oldPassword", e.oldPassword.value)
-    formData.append("newPassword", e.newPassword.value)
+    formData.append("pass", e.oldPassword.value)
+    formData.append("newPass", e.newPassword.value)
     try {
       fetch(URL, {
         method: "POST",
         body: formData
       })
-      .then(response => response.text())
-      .then(data => {
-        displayMessage(e, false)
+      .then(response => {
+        if (response.ok) {
+          response.text().then( text => {
+            displayMessage(text, false)
+            e.reset()
+            e.parentNode.close()
+          })
+        } else {
+          response.text().then( text => {
+            displayMessage(text, true)
+          })
+        }
       })
     } catch (e) {
       console.error(e);
@@ -172,16 +176,16 @@ function changePassword(e) {
 }
 
 async function displayMessage(message, isError) {
-  container = document.getElementById("messageList")
+  const container = document.getElementById(messageListID)
   container.showPopover();
   activeMessages += 1;
   let e = document.createElement("div");
   let text = document.createTextNode(message);
   e.appendChild(text);
   if (isError) {
-    e.classList.add("errorMessage");
+    e.classList.add(errorMessageClass);
   }
-  document.getElementById("messageList").prepend(e);
+  document.getElementById(messageListID).prepend(e);
   await delay(4000 + 1000*activeMessages); // add delay if there's messages already
   e.style.transform = "translateY(-1000px)";
   await delay(1000);
