@@ -221,6 +221,7 @@ function populatePermissionsDropdown(dropdownID, dropdownPopoverID, channelPerms
       newLi.value = userPerms[key]
       newLi.onclick = function() {
         selectElement.innerText = newLi.innerText;
+        selectElement.value = newLi.value;
         ul.hidePopover();
       }
       ul.appendChild(newLi);
@@ -232,14 +233,16 @@ function registerNewUser(e) {
   const user = e.user.value;
   const pass = e.pass.value;
   const passRepeat = e.passRepeat.value;
-  console.log(user)
-  console.log(pass)
-  console.log(passRepeat)
+  const appPermsLevel = e.permsDropdown.value;
   if (!(pass == passRepeat)) {
-    displayMessage("Passwords don't match!", true)
-    return
-  } else {
-    displayMessage("Passwords match!", false)
-    return
+    displayMessage("Passwords don't match!", true);
+    return;
   }
+  if (appPermsLevel == "") {
+    displayMessage("Permission level not selected!", true);
+    return;
+  }
+  displayMessage("Creating user " + user + " with " + getPermName(appPermsLevel) + " permissions...", false);
+  e.reset()
+  e.parentNode.close()
 }

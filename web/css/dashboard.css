@@ -21,10 +21,10 @@ nav {
   }
 }
 
-button#reload, button#userButton {
+.outlineBtn {
   background: none;
   height: 2rem;
-  width: 2rem;
+  aspect-ratio: 1;
   transition: 0.1s all;
   cursor: pointer;
   outline: none;
@@ -214,8 +214,13 @@ button#userButton {
   margin: 0 10vw;
   text-align: center;
   position: relative;
+  display: flex;
+  padding: 0;
   &.full-width {
     margin: 0 0;
+  }
+  button {
+    margin: 0 0.5vw;
   }
 }
 

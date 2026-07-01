@@ -12,14 +12,16 @@
 
   <body onload="init()">
     <nav>
-      <button id="userButton" popovertarget="userMenu"><i class="fa-solid fa-user"></i></button>
+      <button class="outlineBtn" id="userButton" popovertarget="userMenu"><i class="fa-solid fa-user"></i></button>
       <div class="select-wrapper">
+        <button class="outlineBtn" id="editChannel" title="Edit channel" onclick="displayMessage('Under construction', true)"><i class="fa-solid fa-wrench"></i></button>
         <button id="channelDropdown" popovertarget="channelList" class="custom-select">Channel Name</button>
         <ul popover id="channelList" class="custom-select-list">
           <!-- gets populated from JS -->
         </ul>
+        <button class="outlineBtn" id="linkNewChannel" title="Link new channel" onclick="location.href='/twitch/oauth'"><i class="fa-solid fa-plus"></i></button>
       </div>
-      <button id="reload" title="Reload info on page" onclick="init(); rotateOnPress(this)"><i class="fa-solid fa-arrow-rotate-right"></i></button>
+      <button class="outlineBtn" id="reload" title="Reload info on page" onclick="init(); rotateOnPress(this)"><i class="fa-solid fa-arrow-rotate-right"></i></button>
     </nav>
     <div id="mainContainer">
       <div id="twitch-embed"></div>
@@ -42,7 +44,7 @@
       User registration form:
       <form action="javascript:;" onsubmit="registerNewUser(this)" method="post">
         <label for="user">Name</label>
-        <input id="user" name="user" type="text" required>
+        <input id="user" name="user" type="text" autocomplete="off" required>
         <label for="pass">Password for user</label>
         <input id="pass" name="pass" type="password" required>
         <label for="passRepeat">Repeat Password</label>
