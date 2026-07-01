@@ -12,7 +12,7 @@
 
   <body onload="init()">
     <nav>
-      <button id="user" popovertarget="userMenu"><i class="fa-solid fa-user"></i></button>
+      <button id="userButton" popovertarget="userMenu"><i class="fa-solid fa-user"></i></button>
       <div class="select-wrapper">
         <button id="channelDropdown" popovertarget="channelList" class="custom-select">Channel Name</button>
         <ul popover id="channelList" class="custom-select-list">
@@ -33,12 +33,33 @@
     
     </div>
     <div popover="auto" id="userMenu">
-      <label>Username</label>
-      <button popovertarget="registerNewUser">Register New User</button>
+      <label class="displayPerms">Username</label>
+      <button onclick="registerNewUserDialog.showModal()">Register New User</button>
       <button onclick="changePasswordDialog.showModal()">Change Password</button>
       <button onclick="location.href='/logout'">Log out</button>
     </div>
-    <dialog popover="manual" id="changePasswordDialog">
+    <dialog popover="manual" class="dashModal" id="registerNewUserDialog">
+      User registration form:
+      <form action="javascript:;" onsubmit="registerNewUser(this)" method="post">
+        <label for="user">Name</label>
+        <input id="user" name="user" type="text" required>
+        <label for="pass">Password for user</label>
+        <input id="pass" name="pass" type="password" required>
+        <label for="passRepeat">Repeat Password</label>
+        <input id="passRepeat" name="passRepeat" type="password" required>
+        <div class="select-wrapper full-width">
+          <button type="button" id="permsDropdown" popovertarget="permsList" class="custom-select">Permissions</button>
+          <ul popover id="permsList" class="custom-select-list">
+            <!-- gets populated from JS -->
+          </ul>
+        </div>
+        <span>
+          <button id="registerNewUserSubmit" type="submit">Submit</button>
+          <button type="reset" onclick="registerNewUserDialog.close()">Cancel</button>
+        </span>
+      </form>
+    </dialog>
+    <dialog popover="manual" class="dashModal" id="changePasswordDialog">
       Password change form:
       <form action="javascript:;" onsubmit="changePassword(this)" method="post">
         <label for="pass">Old Password</label>

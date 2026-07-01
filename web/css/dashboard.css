@@ -21,7 +21,7 @@ nav {
   }
 }
 
-button#reload, button#user {
+button#reload, button#userButton {
   background: none;
   height: 2rem;
   width: 2rem;
@@ -36,7 +36,6 @@ button#reload, button#user {
   }
   &:active {
     box-shadow: inset 0 0 0.5rem rgba(var(--shadow-color),var(--shadow-opacity-medium));
-    /* transform:scale(0.95); */
     i {
       text-shadow: 0 0 0.25rem var(--text-color);
       filter: brightness(1.2);
@@ -53,7 +52,7 @@ button#reload, button#user {
   }
 }
 
-button#user {
+button#userButton {
   anchor-name: --user-button;
 }
 
@@ -100,7 +99,7 @@ button#user {
   }
 }
 
-#changePasswordDialog {
+.dashModal {
   background: none;
   color: var(--text-color);
   border-radius: 15px;
@@ -113,7 +112,7 @@ button#user {
     display: flex;
     flex-direction: column;
   }
-  * {
+  & * {
     text-align: center;
     display: block;
     margin: 5px auto;
@@ -208,20 +207,41 @@ button#user {
 }
 
 .select-wrapper {
-  flex-grow: 0.7;
+  flex-grow: 1;
   padding: 0 0.5rem;
-  width: 50%;
+  width: inherit;
   max-width: 100%;
-  margin: auto;
+  margin: 0 10vw;
   text-align: center;
   position: relative;
-  
+  &.full-width {
+    margin: 0 0;
+  }
+}
+
+#channelDropdown {
+  anchor-name: --channelDropdown;
+}
+#channelList {
+  position-anchor: --channelDropdown;
+}
+
+#permsDropdown {
+  anchor-name: --permsDropdown;
+  * > .select-wrapper {
+    width: 100%;
+  }
+}
+
+#permsList {
+  position-anchor: --permsDropdown;
 }
 
 .custom-select {
-  anchor-name: --channel-button;
+  /* Make sure to add anchor-name via ID */
   width: 100%;
   border-radius: 10px;
+  margin-bottom: 0;
   text-align: center;
   background: var(--background-color);
   color: var(--text-color);
@@ -235,12 +255,12 @@ button#user {
   }
 }
 .custom-select-list {
+  /* Make sure to add position-anchor via ID */
   display: none;
-  position: absolute;
   inset: auto;
-  position-anchor: --channel-button;
   top: anchor(bottom);
   left: anchor(center);
+  margin-top: 0;
   color: var(--text-color);
   background-color: color-mix(in srgb, var(--background-color), transparent 30%);
   translate: -50%;
@@ -258,6 +278,7 @@ button#user {
     display: block;
     border-top: 1px solid var(--text-color);
     font-weight: normal;
+    margin: auto 0;
     &:first-child {
       border-top: 0;
     }
@@ -266,6 +287,9 @@ button#user {
       background-color: var(--highlight-color);
       color: var(--alt-text-color);
       cursor: pointer;
+      &::after {
+        color: var(--alt-text-color);
+      }
     }
   }
   &:popover-open { 
@@ -275,4 +299,11 @@ button#user {
   @starting-style {
     transform: scaleY(0);
   }
+}
+.displayPerms::after {
+  position: absolute;
+  content: attr(permName);
+  color: var(--highlight-color);
+  margin-left: 0.25rem;
+  font-size: 0.65rem;
 }
