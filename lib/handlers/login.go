@@ -86,7 +86,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		existingUserCookie.Expires = time.Unix(0, 0)
 		http.SetCookie(w, existingUserCookie)
 	}
-	http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, loginPath, http.StatusTemporaryRedirect)
 }
 
 // Check if user JWT exists, is valid, and user exists in database

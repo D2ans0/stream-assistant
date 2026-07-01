@@ -18,6 +18,8 @@ var (
 	clientSecret string
 )
 
+const loginPath = "/login"
+
 // loads config on startup
 func init() {
 	if keyData, err := os.ReadFile(ConfigPath); err == nil {
@@ -47,7 +49,7 @@ func Dashboard(w http.ResponseWriter, r *http.Request) {
 	if user := loggedInUser(r); user != nil {
 		http.ServeFile(w, r, "web/dashboard.html")
 	} else {
-		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+		http.Redirect(w, r, loginPath, http.StatusTemporaryRedirect)
 	}
 }
 
@@ -103,7 +105,7 @@ func TwitchOauth(w http.ResponseWriter, r *http.Request) {
 		oAuth2 := tw.GetConfig()
 		oAuth2.OAuthHandler(w, r)
 	} else {
-		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+		http.Redirect(w, r, loginPath, http.StatusTemporaryRedirect)
 	}
 }
 
@@ -120,7 +122,7 @@ func TwitchOAuthCallback(w http.ResponseWriter, r *http.Request) {
 			defer con.AddOrReplaceTwitchUser(user)
 		}
 	} else {
-		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+		http.Redirect(w, r, loginPath, http.StatusTemporaryRedirect)
 	}
 }
 
