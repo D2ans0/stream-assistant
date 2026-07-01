@@ -1,3 +1,6 @@
+const messageListID = "messageList"
+const errorMessageClass = "errorMessage"
+const userPerms = {"User": 1, "Moderator": 2, "Admin": 3, "Owner": 4}
 
 // cookie functions taken from https://stackoverflow.com/a/24103596
 function setCookie(name,value,days) {
@@ -21,4 +24,30 @@ function getCookie(name) {
 }
 function eraseCookie(name) {   
     document.cookie = name +'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+}
+
+async function displayMessage(message, isError) {
+  const container = document.getElementById(messageListID)
+  container.showPopover();
+  activeMessages += 1;
+  let e = document.createElement("div");
+  let text = document.createTextNode(message);
+  e.appendChild(text);
+  if (isError) {
+    e.classList.add(errorMessageClass);
+  }
+  document.getElementById(messageListID).prepend(e);
+  await delay(4000 + 1000*activeMessages); // add delay if there's messages already
+  e.style.transform = "translateY(-1000px)";
+  await delay(1000);
+  e.remove();
+  activeMessages -= 1;
+  if (activeMessages == 0) {
+    container.hidePopover()
+  }
+}
+
+function getPermName(permissionLevel) {
+    permissionLevel = Number(permissionLevel)
+    return Object.keys(userPerms).find(val=> userPerms[val] === permissionLevel);
 }

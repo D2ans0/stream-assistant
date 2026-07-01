@@ -1,10 +1,14 @@
 var player;
-var SelectedChannel;
 var Username;
-var PermissionsLevel;
+var AppPermissionsLevel;
+var ChannelName;
+var ChannelPermissionsLevel;
 var formObj;
 var activeMessages = 0;
+var Channels;;
 
+const PermsAfterClass = "displayPerms"
+const PermsStringAttr = "permName"
 const ChannelCookieName = "selectedChannel";
 const UserCookieName = "User"
 const ChannelDropdownID = "channelDropdown";
@@ -12,8 +16,8 @@ const ChannelDropdownPopoverID = "channelList";
 const TitleFormID = "streamTitleForm";
 const TitleFormInputFieldID = "streamTitle";
 const UserMenuID = "userMenu";
-const messageListID = "messageList"
-const errorMessageClass = "errorMessage"
+const PermsDropdownID = "permsDropdown";
+const PermsDropdownPopoverID = "permsList";
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Set stream title
@@ -22,7 +26,7 @@ document.getElementById(TitleFormID).addEventListener("submit", async (e) => {
   const formData = new FormData();
   const URL = "/twitch/setStreamTitle";
   
-  formData.append("channel", SelectedChannel)
+  formData.append("channel", ChannelName)
   formData.append("title", document.getElementById(TitleFormInputFieldID).value)
   try {
     fetch(URL, {
@@ -40,17 +44,21 @@ document.getElementById(TitleFormID).addEventListener("submit", async (e) => {
 });
 
 async function init() {
-  SelectedChannel = getCookie(ChannelCookieName);
-  if (SelectedChannel == null) {
-    SelectedChannel = "0" // should let the twitch player load, but fail to find a video if no cookie is set
+  try {
+    ChannelName = getCookie(ChannelCookieName).split(':')[0];
+    ChannelPermissionsLevel = getCookie(ChannelCookieName).split(':')[1];
+  } catch {
+    ChannelName = null
+    ChannelPermissionsLevel = null
   }
-  console.log(SelectedChannel);
-  populateChannelDropdown(ChannelDropdownID);
-  getStreamTitle(TitleFormInputFieldID);
-  loadChannelEmbed(SelectedChannel);
+
   Username = getCookie("User").split(':')[0];
-  PermissionsLevel = getCookie("User").split(':')[1];
-  setUsername(UserMenuID);
+  AppPermissionsLevel = getCookie("User").split(':')[1];
+  populateChannelDropdown(ChannelDropdownID, ChannelDropdownPopoverID);
+  populatePermissionsDropdown(PermsDropdownID, PermsDropdownPopoverID, false);
+  getStreamTitle(TitleFormInputFieldID);
+  loadChannelEmbed(ChannelName);
+  showUsername(UserMenuID);
 }
 
 async function rotateOnPress(e) {
@@ -63,14 +71,25 @@ async function rotateOnPress(e) {
 }
 
 function changeChannel(e) {
-  document.getElementById(ChannelDropdownPopoverID).hidePopover()
-  document.getElementById(ChannelDropdownID).innerText = e.innerText
+  const dropdownBtn = document.getElementById(ChannelDropdownID);
+  const passedChannelName = e.innerText;
+  const passedChannelPerms = e.value;
+  const cookieValue = passedChannelName+":"+passedChannelPerms;
+
+  ChannelName = passedChannelName;
+  ChannelPermissionsLevel = passedChannelPerms;
+
+  dropdownBtn.setAttribute(PermsStringAttr, getPermName(ChannelPermissionsLevel));
+  dropdownBtn.classList.add(PermsAfterClass);
+  dropdownBtn.innerText = passedChannelName;
+  document.getElementById(ChannelDropdownPopoverID).hidePopover();
+  
   getStreamTitle(TitleFormInputFieldID);
-  player.setChannel(e.innerText);
-  setCookie(ChannelCookieName, e.innerText, 365);
+  player.setChannel(passedChannelName);
+  setCookie(ChannelCookieName, cookieValue, 365);
 }
 
-async function populateChannelDropdown(dropdownID) {
+async function populateChannelDropdown(dropdownID, dropdownPopoverID) {
   const URL = "/user/GetUserChannels";
   const ul = document.getElementById(ChannelDropdownPopoverID)
   var selectElement = document.getElementById(dropdownID);
@@ -79,25 +98,33 @@ async function populateChannelDropdown(dropdownID) {
     const response = await fetch(request);
     const text = await response.text();
     const parsedJSON = JSON.parse(text);
+    Channels = parsedJSON;
+
     selectElement.innerHTML = '';
     ul.textContent = ""
     Object.keys(parsedJSON).forEach(key => {
       const newLi = document.createElement("li");
       let text = document.createTextNode(key);
+      newLi.setAttribute(PermsStringAttr, getPermName(parsedJSON[key]));
+      newLi.classList.add(PermsAfterClass)
       newLi.appendChild(text);
-      newLi.onclick = function() { changeChannel(this) }
+      newLi.value = parsedJSON[key]
+      newLi.after
+      newLi.onclick = function() { changeChannel(this); }
       ul.appendChild(newLi);
     });
 
 
     // If no cookie is present, select the first channel
-    if (SelectedChannel == 0) {
-      selectElement.value = ul.children[0].innerText
-      selectElement.innerText = ul.children[0].innerText
-      changeChannel(selectElement)
+    if (ChannelName === null) {
+      selectElement.value = ul.children[0].value;
+      selectElement.innerText = ul.children[0].innerText;
+      changeChannel(selectElement);
     } else {
-      selectElement.innerText = SelectedChannel
-      selectElement.value = SelectedChannel
+      selectElement.innerText = ChannelName;
+      selectElement.value = ChannelName;
+      selectElement.classList.add(PermsAfterClass);
+      selectElement.setAttribute(PermsStringAttr, getPermName(ChannelPermissionsLevel));
     }
   } catch (e) {
     console.error(e);
@@ -106,6 +133,7 @@ async function populateChannelDropdown(dropdownID) {
 }
 
 function loadChannelEmbed(channelName) {
+  if (channelName === null) { channelName = "Twitch"}
   if (player != null) { document.getElementById("twitch-embed").innerHTML = ''; }
   player = new Twitch.Player("twitch-embed", {
     channel: channelName,
@@ -121,7 +149,7 @@ function getStreamTitle(fieldName) {
   const e = document.getElementById(fieldName)
   const URL = "/twitch/getStreamTitle";
   try {
-    fetch(URL+"?channel="+SelectedChannel)
+    fetch(URL+"?channel="+ChannelName)
     .then(response => response.text())
     .then(data => {
       e.value = data
@@ -134,9 +162,12 @@ function getStreamTitle(fieldName) {
   }
 }
 
-function setUsername(fieldName) {
+function showUsername(fieldName) {
   const e = document.getElementById(fieldName);
-  e.getElementsByTagName("label")[0].innerText = Username;
+  const label = e.getElementsByTagName("label")[0]
+  label.classList.add(PermsAfterClass)
+  label.setAttribute(PermsStringAttr, AppPermissionsLevel)
+  label.innerText = Username;
 }
 
 function changePassword(e) {
@@ -175,23 +206,40 @@ function changePassword(e) {
   }
 }
 
-async function displayMessage(message, isError) {
-  const container = document.getElementById(messageListID)
-  container.showPopover();
-  activeMessages += 1;
-  let e = document.createElement("div");
-  let text = document.createTextNode(message);
-  e.appendChild(text);
-  if (isError) {
-    e.classList.add(errorMessageClass);
-  }
-  document.getElementById(messageListID).prepend(e);
-  await delay(4000 + 1000*activeMessages); // add delay if there's messages already
-  e.style.transform = "translateY(-1000px)";
-  await delay(1000);
-  e.remove();
-  activeMessages -= 1;
-  if (activeMessages == 0) {
-    container.hidePopover()
+// dropdownID string - ul element that the il elements will be pushed to
+// dropdownPopoverID string - element that opens the dropdown and shows the selected value
+// channelPerms bool - false is for general App permissions, true is for channels
+function populatePermissionsDropdown(dropdownID, dropdownPopoverID, channelPerms) {
+  const ul = document.getElementById(dropdownPopoverID);
+  const selectElement = document.getElementById(dropdownID);
+  ul.innerText = '';
+  Object.keys(userPerms).forEach(key => {
+    if (userPerms[key] < AppPermissionsLevel) {
+      const newLi = document.createElement("li");
+      let text = document.createTextNode(key);
+      newLi.appendChild(text);
+      newLi.value = userPerms[key]
+      newLi.onclick = function() {
+        selectElement.innerText = newLi.innerText;
+        ul.hidePopover();
+      }
+      ul.appendChild(newLi);
+    }
+  });
+}
+
+function registerNewUser(e) {
+  const user = e.user.value;
+  const pass = e.pass.value;
+  const passRepeat = e.passRepeat.value;
+  console.log(user)
+  console.log(pass)
+  console.log(passRepeat)
+  if (!(pass == passRepeat)) {
+    displayMessage("Passwords don't match!", true)
+    return
+  } else {
+    displayMessage("Passwords match!", false)
+    return
   }
 }
